@@ -25,7 +25,7 @@
         th { background: #181818; color: #aaa; text-transform: uppercase; font-size: 0.75rem; }
 
         .btn { padding: 8px 16px; background-color: var(--cr-red); color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
-        .btn-small { padding: 5px 10px; font-size: 0.8rem; }
+        .btn-small { padding: 5px 10px; font-size: 0.8rem; margin: 2px; }
         .btn-secondary { background: #333; color: #ccc; }
         .btn-edit { background: #1976d2; color: white; }
 
@@ -37,7 +37,7 @@
         
         .form-inline { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; align-items: center; }
         input[type="text"], input[type="date"], input[type="number"] { padding: 8px; background: #121212; border: 1px solid var(--cr-border); color: #fff; border-radius: 4px; }
-        input[type="text"] { flex: 2; min-width: 180px; }
+        input[type="text"] { flex: 2; min-width: 150px; }
         input[type="number"] { width: 80px; }
         input[type="date"] { flex: 1; min-width: 130px; }
         
@@ -49,13 +49,14 @@
 
 <header>
     <h1>Gestion Logistique (MOT)</h1>
-    <div style="font-size: 0.8rem; color: #4caf50;">✔ Lots, Quantités, Matériel & Modification</div>
+    <div style="font-size: 0.8rem; color: #4caf50;">✔ Lots, Quantités, Matériel, Encoches & Modification</div>
 </header>
 
 <div class="panel">
     <h3>Ajouter un Lot / Conteneur</h3>
     <div class="form-inline">
-        <input type="text" id="new-lot-name" placeholder="Nom du lot ou conteneur (ex: Lot Pansement)">
+        <input type="text" id="new-lot-name" placeholder="Nom du lot">
+        <input type="text" id="new-lot-encoche" placeholder="Encoche (ex: E1, A4)" style="width: 100px;">
         <button class="btn" onclick="addNewLot()">+ Créer le lot</button>
     </div>
 </div>
@@ -66,6 +67,7 @@
         <thead>
             <tr>
                 <th>Nom du Lot</th>
+                <th>Encoche</th>
                 <th>Péremption</th>
                 <th>Validation Physique</th>
                 <th>Actions</th>
@@ -77,28 +79,20 @@
 
 <div id="items-panel" class="panel" style="display: none;">
     <h3 id="items-title">Articles dans le lot</h3>
-    
     <div class="form-inline" style="background: #151515; padding: 12px; border-radius: 6px; border: 1px dashed var(--cr-border);">
-        <input type="text" id="item-name" placeholder="Nom de l'article / appareil">
+        <input type="text" id="item-name" placeholder="Nom de l'article">
         <input type="number" id="item-qty" placeholder="Qté" min="1" value="1">
         <input type="date" id="item-expiry">
-        
         <label class="checkbox-container">
             <input type="checkbox" id="item-is-electronic" onchange="toggleExpiryField()">
             <span>🔋 Électronique</span>
         </label>
-
         <button class="btn" onclick="addItemToCurrentLot()">Ajouter</button>
     </div>
 
     <table id="items-table">
         <thead>
-            <tr>
-                <th>Article</th>
-                <th>Quantité</th>
-                <th>Date Péremption / Type</th>
-                <th>Action</th>
-            </tr>
+            <tr><th>Article</th><th>Quantité</th><th>Date Péremption / Type</th><th>Action</th></tr>
         </thead>
         <tbody id="items-body"></tbody>
     </table>
@@ -117,14 +111,8 @@
     function toggleExpiryField() {
         const isElec = document.getElementById('item-is-electronic').checked;
         const expiryInput = document.getElementById('item-expiry');
-        if (isElec) {
-            expiryInput.value = '';
-            expiryInput.disabled = true;
-            expiryInput.style.opacity = '0.3';
-        } else {
-            expiryInput.disabled = false;
-            expiryInput.style.opacity = '1';
-        }
+        expiryInput.disabled = isElec;
+        expiryInput.style.opacity = isElec ? '0.3' : '1';
     }
 
     function getLotStatus(items) {
@@ -146,51 +134,57 @@
     function renderContainers() {
         const tbody = document.getElementById('containers-body');
         if (!tbody) return;
-
-        if (data.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#888;">Aucun lot pour l'instant. Utilisez le formulaire ci-dessus.</td></tr>`;
-            return;
-        }
+        if (data.length === 0) { tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">Aucun lot.</td></tr>`; return; }
 
         tbody.innerHTML = data.map(c => {
             const status = getLotStatus(c.items);
             return `<tr>
                 <td><strong>${c.name}</strong></td>
+                <td>${c.encoche || '-'}</td>
                 <td><span class="badge ${status.class}">${status.text}</span></td>
                 <td>
-                    ${c.lastChecked ? '✅ ' + c.lastChecked : '❌ Non vérifié'}
-                    <button class="btn btn-small btn-secondary" style="margin-left:10px;" onclick="toggleCheck(${c.id})">${c.lastChecked ? 'Dévalider' : 'Valider'}</button>
+                    ${c.lastChecked ? '✅ ' + c.lastChecked : '❌'}
+                    <button class="btn btn-small btn-secondary" onclick="toggleCheck(${c.id})">${c.lastChecked ? 'Dévalider' : 'Valider'}</button>
                 </td>
                 <td>
-                    <button class="btn btn-small" onclick="viewItems(${c.id})">Gérer articles</button>
-                    <button class="btn btn-small" style="background:#800;" onclick="deleteLot(${c.id})">Suppr</button>
+                    <button class="btn btn-small btn-edit" onclick="renameLot(${c.id})">Renommer</button>
+                    <button class="btn btn-small" onclick="viewItems(${c.id})">Articles</button>
+                    <button class="btn btn-small" style="background:#800;" onclick="deleteLot(${c.id})">X</button>
                 </td>
             </tr>`;
         }).join('');
     }
 
     function addNewLot() {
-        const input = document.getElementById('new-lot-name');
-        const name = input.value.trim();
-        if (!name) {
-            alert("Veuillez entrer un nom de lot.");
-            return;
-        }
-        data.push({ id: Date.now(), name, items: [], lastChecked: null });
-        input.value = '';
+        const nameInput = document.getElementById('new-lot-name');
+        const encocheInput = document.getElementById('new-lot-encoche');
+        if (!nameInput.value.trim()) { alert("Nom requis."); return; }
+        data.push({ id: Date.now(), name: nameInput.value.trim(), encoche: encocheInput.value.trim(), items: [], lastChecked: null });
+        nameInput.value = ''; encocheInput.value = '';
         saveToStorage();
+    }
+
+    function renameLot(id) {
+        const c = data.find(x => x.id === id);
+        const newName = prompt("Nouveau nom du lot :", c.name);
+        const newEncoche = prompt("Nouvelle encoche :", c.encoche || '');
+        if (newName !== null) {
+            c.name = newName.trim();
+            c.encoche = newEncoche.trim();
+            saveToStorage();
+        }
     }
 
     function toggleCheck(id) {
         const c = data.find(x => x.id === id);
         if (c) {
-            c.lastChecked = c.lastChecked ? null : new Date().toLocaleDateString('fr-FR') + ' ' + new Date().toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'});
+            c.lastChecked = c.lastChecked ? null : new Date().toLocaleDateString('fr-FR');
             saveToStorage();
         }
     }
 
     function deleteLot(id) {
-        if (confirm("Voulez-vous vraiment supprimer ce lot ?")) {
+        if (confirm("Supprimer ce lot ?")) {
             data = data.filter(x => x.id !== id);
             saveToStorage();
             if (currentContainerId === id) closeItems();
@@ -201,7 +195,7 @@
         currentContainerId = id;
         const c = data.find(x => x.id === id);
         document.getElementById('items-panel').style.display = 'block';
-        document.getElementById('items-title').textContent = "Articles du lot : " + c.name;
+        document.getElementById('items-title').textContent = "Articles : " + c.name + " (" + (c.encoche || "Sans encoche") + ")";
         renderItems();
         document.getElementById('items-panel').scrollIntoView({ behavior: 'smooth' });
     }
@@ -209,94 +203,41 @@
     function renderItems() {
         const c = data.find(x => x.id === currentContainerId);
         const tbody = document.getElementById('items-body');
-        if (!c || !c.items || c.items.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#888;">Aucun article dans ce lot.</td></tr>`;
-            return;
-        }
+        if (!c || !c.items || c.items.length === 0) { tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;">Vide.</td></tr>`; return; }
         tbody.innerHTML = c.items.map((i, idx) => `<tr>
-            <td>${i.name}</td>
-            <td><strong>${i.qty}</strong></td>
-            <td>${i.isElectronic ? '🔋 Appareil électronique (Sans péremption)' : i.expiry}</td>
-            <td>
-                <button class="btn btn-small btn-edit" onclick="editItem(${idx})">Modifier</button>
-                <button class="btn btn-small" style="background:#800;" onclick="deleteItem(${idx})">X</button>
-            </td>
+            <td>${i.name}</td><td><strong>${i.qty}</strong></td>
+            <td>${i.isElectronic ? '🔋 Électronique' : i.expiry}</td>
+            <td><button class="btn btn-small btn-edit" onclick="editItem(${idx})">Modif</button> <button class="btn btn-small" style="background:#800;" onclick="deleteItem(${idx})">X</button></td>
         </tr>`).join('');
     }
 
     function addItemToCurrentLot() {
-        const nameInput = document.getElementById('item-name');
-        const qtyInput = document.getElementById('item-qty');
-        const expiryInput = document.getElementById('item-expiry');
-        const elecInput = document.getElementById('item-is-electronic');
-        
-        const name = nameInput.value.trim();
-        const qty = parseInt(qtyInput.value);
-        const isElectronic = elecInput.checked;
-        const expiry = expiryInput.value;
-
-        if (!name || isNaN(qty) || qty <= 0 || (!isElectronic && !expiry)) {
-            alert("Veuillez remplir correctement le nom, la quantité et soit une date de péremption, soit cocher l'appareil électronique.");
-            return;
-        }
-
+        const name = document.getElementById('item-name').value.trim();
+        const qty = parseInt(document.getElementById('item-qty').value);
+        const isElectronic = document.getElementById('item-is-electronic').checked;
+        const expiry = document.getElementById('item-expiry').value;
+        if (!name || isNaN(qty) || (!isElectronic && !expiry)) { alert("Champs invalides."); return; }
         const c = data.find(x => x.id === currentContainerId);
-        if (c) {
-            if (!c.items) c.items = [];
-            c.items.push({ name, qty, expiry: isElectronic ? null : expiry, isElectronic });
-            
-            nameInput.value = '';
-            qtyInput.value = '1';
-            expiryInput.value = '';
-            elecInput.checked = false;
-            toggleExpiryField();
-
-            saveToStorage();
-            renderItems();
-        }
+        c.items.push({ name, qty, expiry: isElectronic ? null : expiry, isElectronic });
+        saveToStorage();
+        renderItems();
     }
 
     function editItem(idx) {
         const c = data.find(x => x.id === currentContainerId);
         const i = c.items[idx];
-        
-        const newName = prompt("Modifier le nom de l'article :", i.name);
-        if (newName === null) return;
-        
-        const newQtyStr = prompt("Modifier la quantité :", i.qty);
-        if (newQtyStr === null) return;
-        const newQty = parseInt(newQtyStr);
-        if (isNaN(newQty) || newQty <= 0) {
-            alert("Quantité invalide.");
-            return;
-        }
-
-        i.name = newName.trim();
-        i.qty = newQty;
-
-        if (!i.isElectronic) {
-            const newExpiry = prompt("Modifier la date de péremption (AAAA-MM-JJ) :", i.expiry);
-            if (newExpiry !== null) i.expiry = newExpiry;
-        }
-
-        saveToStorage();
-        renderItems();
+        const n = prompt("Nom :", i.name);
+        if (n !== null) { i.name = n; saveToStorage(); renderItems(); }
     }
 
     function deleteItem(idx) {
         const c = data.find(x => x.id === currentContainerId);
-        if (c && c.items) {
-            c.items.splice(idx, 1);
-            saveToStorage();
-            renderItems();
-        }
+        c.items.splice(idx, 1);
+        saveToStorage();
+        renderItems();
     }
 
-    function closeItems() {
-        currentContainerId = null;
-        document.getElementById('items-panel').style.display = 'none';
-    }
-
+    function closeItems() { document.getElementById('items-panel').style.display = 'none'; }
     window.onload = renderContainers;
 </script>
 </body>
