@@ -2,323 +2,92 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Logistique - Croix-Rouge (MAT Live)</title>
+    <title>Logistique Croix-Rouge</title>
     <style>
-        :root {
-            --cr-red: #cc0000;
-            --cr-dark-red: #990000;
-            --cr-dark-bg: #1a1a1a;
-            --cr-panel-bg: #262626;
-            --cr-border: #404040;
-            --cr-text: #f0f0f0;
-            --cr-text-muted: #b0b0b0;
-        }
-
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
-        body { background-color: var(--cr-dark-bg); color: var(--cr-text); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
-
-        #app-screen { display: flex; flex-direction: column; height: 100vh; }
-        header { background: var(--cr-panel-bg); border-bottom: 3px solid var(--cr-red); padding: 15px 25px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
-        
-        .tab-content { display: block; flex: 1; padding: 20px; overflow-y: auto; }
-        .panel { background: var(--cr-panel-bg); border: 1px solid var(--cr-border); border-radius: 6px; padding: 20px; margin-bottom: 20px; }
-        .header-actions { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px; }
-        
+        body { font-family: sans-serif; background: #f4f4f4; padding: 20px; }
+        .container { max-width: 900px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .section { margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        input, select { padding: 8px; margin: 5px; border: 1px solid #ccc; border-radius: 4px; }
+        button { padding: 8px 15px; background: #cc0000; color: white; border: none; border-radius: 4px; cursor: pointer; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { padding: 10px; text-align: left; border-bottom: 1px solid var(--cr-border); font-size: 0.9rem; }
-        th { background: #333; color: #fff; }
-        
-        .btn { padding: 8px 15px; background-color: var(--cr-red); color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
-        .btn:hover { background-color: var(--cr-dark-red); }
-        .btn-small { padding: 4px 8px; font-size: 0.8rem; }
-        .btn-secondary { background: #555; }
-        .btn-secondary:hover { background: #666; }
-
-        .form-inline { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
-        .form-inline input { padding: 8px; background: #333; border: 1px solid var(--cr-border); color: #fff; border-radius: 4px; flex: 1; min-width: 120px; }
-
-        .badge { padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; display: inline-block; }
-        .badge-ok { background-color: #1e4620; color: #4caf50; }
-        .badge-warn { background-color: #583e1c; color: #ff9800; }
-        .badge-alert { background-color: #511c1c; color: #f44336; }
-        .badge-secondary { background-color: #444; color: #aaa; }
-        
-        #sync-indicator { font-size: 0.8rem; padding: 4px 8px; border-radius: 4px; background: #333; color: #aaa; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
     </style>
 </head>
 <body>
 
-    <div id="app-screen">
-        <header>
-            <h1><span>✚</span> Gestion Logistique (MAT)</h1>
-            <div style="display: flex; align-items: center; gap: 10px;">
-                <span id="sync-indicator">Connexion au cloud...</span>
-                <button class="btn btn-secondary btn-small" onclick="fetchData()">🔄 Actualiser</button>
-            </div>
-        </header>
-
-        <div id="main-tab" class="tab-content">
-            <div class="panel">
-                <div class="header-actions">
-                    <h3>Mes Conteneurs / Catégories</h3>
-                    <button class="btn" onclick="addContainer()">+ Ajouter un conteneur</button>
-                </div>
-                <table id="containers-table">
-                    <thead>
-                        <tr>
-                            <th>Nom du conteneur</th>
-                            <th>Type</th>
-                            <th>Articles</th>
-                            <th>État Global</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-            </div>
-
-            <div id="management-panel" class="panel" style="display: none; border-color: var(--cr-red);">
-                <div class="header-actions">
-                    <h3 id="management-title">Gestion du conteneur</h3>
-                    <button class="btn btn-secondary btn-small" onclick="closeManagement()">← Retour à la liste</button>
-                </div>
-
-                <div style="background: #222; padding: 15px; border-radius: 4px; margin-bottom: 15px;">
-                    <h4 style="margin-bottom: 10px; font-size: 0.95rem; color: var(--cr-red);">Ajouter du matériel dans ce conteneur</h4>
-                    <div class="form-inline">
-                        <input type="text" id="item-name" placeholder="Nom de l'article (ex: Pansements)">
-                        <input type="text" id="item-lot" placeholder="N° de lot">
-                        <input type="number" id="item-qty" placeholder="Quantité" style="max-width: 100px;">
-                        <input type="date" id="item-expiry">
-                        <button class="btn" onclick="addItemToContainer()">Ajouter</button>
-                    </div>
-                </div>
-
-                <table id="items-table">
-                    <thead>
-                        <tr>
-                            <th>Article</th>
-                            <th>N° de Lot</th>
-                            <th>Quantité</th>
-                            <th>Péremption</th>
-                            <th>État</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-            </div>
-        </div>
+<div class="container">
+    <h2>Logistique Croix-Rouge</h2>
+    
+    <!-- Sélection de la catégorie (votre organisation) -->
+    <div class="section">
+        <label>Emplacement :</label>
+        <select id="category" onchange="renderView()">
+            <option value="vehicule">Véhicule</option>
+            <option value="reserve">Réserves</option>
+        </select>
     </div>
 
-    <script>
-        const BIN_ID = "665f839fe41b4d34e4053f3e";
-        const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
-        const API_KEY = '$2a$10$wU0u/L4y9N/yv5L.9.9sSe5gYJ9j.T4.g7.5u3QpG1zXz9t.9nZJ.';
+    <!-- Zone d'ajout -->
+    <div class="section">
+        <input type="text" id="name" placeholder="Article">
+        <input type="text" id="lot" placeholder="Lot">
+        <input type="date" id="expiry">
+        <button onclick="addItem()">Ajouter</button>
+    </div>
 
-        let containers = [];
-        let currentContainerId = null;
+    <table>
+        <thead><tr><th>Article</th><th>Lot</th><th>Péremption</th><th>Action</th></tr></thead>
+        <tbody id="list"></tbody>
+    </table>
+</div>
 
-        async function fetchData() {
-            const indicator = document.getElementById('sync-indicator');
-            indicator.textContent = "🔄 Synchro...";
-            indicator.style.color = "#ff9800";
-            
-            try {
-                const response = await fetch(API_URL, {
-                    headers: { 'X-Master-Key': API_KEY }
-                });
-                const json = await response.json();
-                containers = json.record || [];
-                
-                renderContainers();
-                if(currentContainerId !== null) {
-                    renderItemsTable();
-                }
-                
-                indicator.textContent = "✔ En ligne (Direct)";
-                indicator.style.color = "#4caf50";
-            } catch (e) {
-                indicator.textContent = "⚠ Erreur synchro";
-                indicator.style.color = "#f44336";
-            }
-        }
+<script>
+    // Chargement depuis le stockage local (synchronisé par le navigateur)
+    function getData() {
+        return JSON.parse(localStorage.getItem('logistique_data') || '{"vehicule":[], "reserve":[]}');
+    }
 
-        async function saveAndSync() {
-            const indicator = document.getElementById('sync-indicator');
-            indicator.textContent = "💾 Enregistrement...";
-            
-            try {
-                await fetch(API_URL, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-Master-Key': API_KEY
-                    },
-                    body: JSON.stringify(containers)
-                });
-                fetchData();
-            } catch (e) {
-                indicator.textContent = "⚠ Échec sauvegarde";
-                indicator.style.color = "#f44336";
-            }
-        }
+    function renderView() {
+        const cat = document.getElementById('category').value;
+        const data = getData();
+        const list = document.getElementById('list');
+        list.innerHTML = '';
+        
+        data[cat].forEach((item, index) => {
+            list.innerHTML += `<tr>
+                <td>${item.name}</td><td>${item.lot}</td><td>${item.expiry}</td>
+                <td><button onclick="deleteItem('${cat}', ${index})">Supprimer</button></td>
+            </tr>`;
+        });
+    }
 
-        window.onload = function() {
-            fetchData();
-            setInterval(fetchData, 5000);
-        };
+    function addItem() {
+        const cat = document.getElementById('category').value;
+        const name = document.getElementById('name').value;
+        const lot = document.getElementById('lot').value;
+        const expiry = document.getElementById('expiry').value;
+        
+        if(!name || !expiry) return alert("Remplissez le nom et la date !");
 
-        function getStatusInfo(expiryDateStr) {
-            const today = new Date();
-            let expiryDate = new Date(expiryDateStr);
-            let diffTime = expiryDate - today;
-            let diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            
-            if (isNaN(expiryDate.getTime())) {
-                return { level: 0, text: 'Non spécifié', class: 'badge-secondary' };
-            } else if (diffDays < 0) {
-                return { level: 2, text: 'Périmé !', class: 'badge-alert' };
-            } else if (diffDays < 90) {
-                return { level: 1, text: 'Expire bientôt', class: 'badge-warn' };
-            } else {
-                return { level: 0, text: 'OK', class: 'badge-ok' };
-            }
-        }
+        const data = getData();
+        data[cat].push({name, lot, expiry});
+        localStorage.setItem('logistique_data', JSON.stringify(data));
+        
+        document.getElementById('name').value = '';
+        document.getElementById('lot').value = '';
+        document.getElementById('expiry').value = '';
+        
+        renderView();
+    }
 
-        function getContainerGlobalStatus(container) {
-            if (!container.items || container.items.length === 0) {
-                return { text: 'Vide', class: 'badge-secondary' };
-            }
+    function deleteItem(cat, index) {
+        const data = getData();
+        data[cat].splice(index, 1);
+        localStorage.setItem('logistique_data', JSON.stringify(data));
+        renderView();
+    }
 
-            let maxLevel = 0;
-            container.items.forEach(item => {
-                let info = getStatusInfo(item.expiry);
-                if (info.level > maxLevel) {
-                    maxLevel = info.level;
-                }
-            });
-
-            if (maxLevel === 2) return { text: '❌ Alerte (Périmé)', class: 'badge-alert' };
-            if (maxLevel === 1) return { text: '⚠️ À surveiller', class: 'badge-warn' };
-            return { text: '✔ Conforme', class: 'badge-ok' };
-        }
-
-        function renderContainers() {
-            const tbody = document.querySelector('#containers-table tbody');
-            if(!tbody) return;
-            tbody.innerHTML = '';
-            containers.forEach(c => {
-                let globalStatus = getContainerGlobalStatus(c);
-                tbody.innerHTML += `<tr>
-                    <td><strong>${c.name}</strong></td>
-                    <td>${c.type}</td>
-                    <td>${c.items ? c.items.length : 0} article(s)</td>
-                    <td><span class="badge ${globalStatus.class}">${globalStatus.text}</span></td>
-                    <td>
-                        <button class="btn btn-small" onclick="manageContainer(${c.id})">Gérer</button>
-                        <button class="btn btn-small btn-secondary" onclick="renameContainer(${c.id})">Renommer</button>
-                        <button class="btn btn-small" style="background:#800;" onclick="deleteContainer(${c.id})">Supprimer</button>
-                    </td>
-                </tr>`;
-            });
-        }
-
-        function addContainer() {
-            const name = prompt("Nom du conteneur (ex: Sac B, Véhicule de liaison, Armoire) :");
-            const type = prompt("Type de conteneur (ex: Sac, Véhicule, Stock) :");
-            if(name && type) {
-                containers.push({ id: Date.now(), name, type, items: [] });
-                saveAndSync();
-            }
-        }
-
-        function renameContainer(id) {
-            const c = containers.find(x => x.id === id);
-            const newName = prompt("Nouveau nom :", c.name);
-            if(newName) { 
-                c.name = newName; 
-                saveAndSync();
-            }
-        }
-
-        function deleteContainer(id) {
-            if(confirm("Voulez-vous vraiment supprimer ce conteneur ?")) {
-                containers = containers.filter(x => x.id !== id);
-                saveAndSync();
-                closeManagement();
-            }
-        }
-
-        function manageContainer(id) {
-            currentContainerId = id;
-            const c = containers.find(x => x.id === id);
-            if(!c) return;
-            document.getElementById('management-title').textContent = `Gestion de : ${c.name} (${c.type})`;
-            document.getElementById('management-panel').style.display = 'block';
-            renderItemsTable();
-            document.getElementById('management-panel').scrollIntoView({ behavior: 'smooth' });
-        }
-
-        function closeManagement() {
-            currentContainerId = null;
-            document.getElementById('management-panel').style.display = 'none';
-        }
-
-        function renderItemsTable() {
-            const c = containers.find(x => x.id === currentContainerId);
-            const tbody = document.querySelector('#items-table tbody');
-            if(!tbody) return;
-            tbody.innerHTML = '';
-
-            if(!c || !c.items || c.items.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#888;">Aucun article dans ce conteneur pour le moment.</td></tr>`;
-                return;
-            }
-
-            c.items.forEach((item, index) => {
-                let statusInfo = getStatusInfo(item.expiry);
-
-                tbody.innerHTML += `<tr>
-                    <td>${item.name}</td>
-                    <td>${item.lot}</td>
-                    <td>${item.qty}</td>
-                    <td>${item.expiry}</td>
-                    <td><span class="badge ${statusInfo.class}">${statusInfo.text}</span></td>
-                    <td><button class="btn btn-small" style="background:#800;" onclick="deleteItem(${index})">Retirer</button></td>
-                </tr>`;
-            });
-        }
-
-        function addItemToContainer() {
-            const name = document.getElementById('item-name').value.trim();
-            const lot = document.getElementById('item-lot').value.trim();
-            const qty = document.getElementById('item-qty').value.trim();
-            const expiry = document.getElementById('item-expiry').value;
-
-            if(!name || !qty || !expiry) {
-                alert("Veuillez remplir au moins le nom, la quantité et la date de péremption.");
-                return;
-            }
-
-            const c = containers.find(x => x.id === currentContainerId);
-            if(!c.items) c.items = [];
-            c.items.push({ name, lot: lot || 'N/A', qty, expiry });
-
-            saveAndSync();
-
-            document.getElementById('item-name').value = '';
-            document.getElementById('item-lot').value = '';
-            document.getElementById('item-qty').value = '';
-            document.getElementById('item-expiry').value = '';
-        }
-
-        function deleteItem(index) {
-            const c = containers.find(x => x.id === currentContainerId);
-            c.items.splice(index, 1);
-            saveAndSync();
-        }
-    </script>
+    renderView();
+</script>
 </body>
 </html>
