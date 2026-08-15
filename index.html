@@ -7,19 +7,17 @@
     <style>
         :root {
             --cr-red: #cc0000;
-            --cr-dark-red: #990000;
             --cr-dark-bg: #121212;
             --cr-panel-bg: #1e1e1e;
             --cr-border: #333333;
             --cr-text: #e0e0e0;
-            --cr-text-muted: #888888;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         body { background-color: var(--cr-dark-bg); color: var(--cr-text); padding: 20px; }
 
         .panel { background: var(--cr-panel-bg); border: 1px solid var(--cr-border); border-radius: 8px; padding: 20px; margin-bottom: 20px; }
-        header { border-bottom: 3px solid var(--cr-red); padding-bottom: 10px; margin-bottom: 20px; }
+        header { border-bottom: 3px solid var(--cr-red); padding-bottom: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
         header h1 { color: #fff; font-size: 1.5rem; }
 
         table { width: 100%; border-collapse: collapse; margin-top: 15px; }
@@ -36,22 +34,27 @@
         .badge-alert { background: #b71c1c; color: #ef9a9a; }
         .badge-secondary { background: #2a2a2a; color: #888; }
         
-        .form-inline { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
-        input { padding: 8px; background: #121212; border: 1px solid var(--cr-border); color: #fff; border-radius: 4px; }
+        .form-inline { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+        input { padding: 8px; background: #121212; border: 1px solid var(--cr-border); color: #fff; border-radius: 4px; flex: 1; min-width: 200px; }
     </style>
 </head>
 <body>
 
 <header>
     <h1>Gestion Logistique (MAT)</h1>
-    <div id="sync-status" style="font-size: 0.8rem; color: var(--cr-text-muted);">Initialisation...</div>
+    <div style="font-size: 0.8rem; color: #4caf50;">✔ Prêt pour GitHub & Utilisation Terrain</div>
 </header>
 
 <div class="panel">
-    <div style="display: flex; justify-content: space-between; align-items: center;">
-        <h3>Conteneurs & Lots</h3>
-        <button class="btn" onclick="addContainer()">+ Ajouter un Lot</button>
+    <h3>Ajouter un Lot / Conteneur</h3>
+    <div class="form-inline">
+        <input type="text" id="new-lot-name" placeholder="Nom du lot ou conteneur (ex: Lot Pansement)">
+        <button class="btn" onclick="addNewLot()">+ Créer le lot</button>
     </div>
+</div>
+
+<div class="panel">
+    <h3>Conteneurs & Lots enregistrés</h3>
     <table id="containers-table">
         <thead>
             <tr>
@@ -68,9 +71,9 @@
 <div id="items-panel" class="panel" style="display: none;">
     <h3 id="items-title">Articles dans le lot</h3>
     <div class="form-inline">
-        <input type="text" id="item-name" placeholder="Nom article">
+        <input type="text" id="item-name" placeholder="Nom de l'article">
         <input type="date" id="item-expiry">
-        <button class="btn" onclick="addItem()">Ajouter Article</button>
+        <button class="btn" onclick="addItemToCurrentLot()">Ajouter Article</button>
     </div>
     <table id="items-table">
         <thead>
@@ -82,45 +85,22 @@
         </thead>
         <tbody id="items-body"></tbody>
     </table>
-    <button class="btn btn-secondary" onclick="closeItems()" style="margin-top: 15px;">Fermer</button>
+    <button class="btn btn-secondary" onclick="closeItems()" style="margin-top: 15px;">Fermer la gestion du lot</button>
 </div>
 
 <script>
-    const BIN_ID = "665f839fe41b4d34e4053f3e";
-    const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
-    const API_KEY = '$2a$10$wU0u/L4y9N/yv5L.9.9sSe5gYJ9j.T4.g7.5u3QpG1zXz9t.9nZJ.';
-
-    let data = JSON.parse(localStorage.getItem('cr_data') || '[]');
+    let data = JSON.parse(localStorage.getItem('cr_data_github') || '[]');
     let currentContainerId = null;
 
-    async function fetchData() {
-        try {
-            const response = await fetch(API_URL, { headers: { 'X-Master-Key': API_KEY } });
-            const json = await response.json();
-            data = json.record;
-            render();
-            document.getElementById('sync-status').textContent = "✔ À jour (Cloud)";
-        } catch (e) {
-            document.getElementById('sync-status').textContent = "⚠ Hors-ligne (Local)";
-        }
-    }
-
-    async function save() {
-        localStorage.setItem('cr_data', JSON.stringify(data));
-        render();
-        try {
-            await fetch(API_URL, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json', 'X-Master-Key': API_KEY },
-                body: JSON.stringify(data)
-            });
-        } catch (e) {}
+    function saveToStorage() {
+        localStorage.setItem('cr_data_github', JSON.stringify(data));
+        renderContainers();
     }
 
     function getLotStatus(items) {
         if (!items || items.length === 0) return { class: 'badge-secondary', text: 'Vide' };
         const now = new Date();
-        let worst = 0; // 0: OK, 1: Warn, 2: Alert
+        let worst = 0; 
         items.forEach(i => {
             const exp = new Date(i.expiry);
             const diff = (exp - now) / (1000 * 60 * 60 * 24);
@@ -132,8 +112,15 @@
         return { class: 'badge-ok', text: 'Conforme' };
     }
 
-    function render() {
+    function renderContainers() {
         const tbody = document.getElementById('containers-body');
+        if (!tbody) return;
+
+        if (data.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#888;">Aucun lot pour l'instant. Utilisez le formulaire ci-dessus.</td></tr>`;
+            return;
+        }
+
         tbody.innerHTML = data.map(c => {
             const status = getLotStatus(c.items);
             return `<tr>
@@ -144,37 +131,57 @@
                     <button class="btn btn-small btn-secondary" style="margin-left:10px;" onclick="toggleCheck(${c.id})">${c.lastChecked ? 'Dévalider' : 'Valider'}</button>
                 </td>
                 <td>
-                    <button class="btn btn-small" onclick="viewItems(${c.id})">Gérer</button>
+                    <button class="btn btn-small" onclick="viewItems(${c.id})">Gérer articles</button>
                     <button class="btn btn-small" style="background:#800;" onclick="deleteLot(${c.id})">Suppr</button>
                 </td>
             </tr>`;
         }).join('');
     }
 
-    function addContainer() {
-        const name = prompt("Nom du nouveau lot :");
-        if (name) {
-            data.push({ id: Date.now(), name, items: [], lastChecked: null });
-            save();
+    function addNewLot() {
+        const input = document.getElementById('new-lot-name');
+        const name = input.value.trim();
+        if (!name) {
+            alert("Veuillez entrer un nom de lot.");
+            return;
         }
+        data.push({ id: Date.now(), name, items: [], lastChecked: null });
+        input.value = '';
+        saveToStorage();
     }
 
     function toggleCheck(id) {
         const c = data.find(x => x.id === id);
-        c.lastChecked = c.lastChecked ? null : new Date().toLocaleString();
-        save();
+        if (c) {
+            c.lastChecked = c.lastChecked ? null : new Date().toLocaleDateString('fr-FR') + ' ' + new Date().toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'});
+            saveToStorage();
+        }
+    }
+
+    function deleteLot(id) {
+        if (confirm("Voulez-vous vraiment supprimer ce lot ?")) {
+            data = data.filter(x => x.id !== id);
+            saveToStorage();
+            if (currentContainerId === id) closeItems();
+        }
     }
 
     function viewItems(id) {
         currentContainerId = id;
+        const c = data.find(x => x.id === id);
         document.getElementById('items-panel').style.display = 'block';
-        document.getElementById('items-title').textContent = "Articles du lot : " + data.find(c => c.id === id).name;
+        document.getElementById('items-title').textContent = "Articles du lot : " + c.name;
         renderItems();
+        document.getElementById('items-panel').scrollIntoView({ behavior: 'smooth' });
     }
 
     function renderItems() {
         const c = data.find(x => x.id === currentContainerId);
         const tbody = document.getElementById('items-body');
+        if (!c || !c.items || c.items.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; color:#888;">Aucun article dans ce lot.</td></tr>`;
+            return;
+        }
         tbody.innerHTML = c.items.map((i, idx) => `<tr>
             <td>${i.name}</td>
             <td>${i.expiry}</td>
@@ -182,34 +189,43 @@
         </tr>`).join('');
     }
 
-    function addItem() {
-        const name = document.getElementById('item-name').value;
-        const expiry = document.getElementById('item-expiry').value;
-        if (!name || !expiry) return alert("Remplissez tout");
-        data.find(c => c.id === currentContainerId).items.push({ name, expiry });
-        document.getElementById('item-name').value = '';
-        save();
-        renderItems();
-        render();
-    }
+    function addItemToCurrentLot() {
+        const nameInput = document.getElementById('item-name');
+        const expiryInput = document.getElementById('item-expiry');
+        const name = nameInput.value.trim();
+        const expiry = expiryInput.value;
 
-    function deleteItem(idx) {
-        data.find(c => c.id === currentContainerId).items.splice(idx, 1);
-        save();
-        renderItems();
-        render();
-    }
+        if (!name || !expiry) {
+            alert("Veuillez remplir le nom et la date de péremption.");
+            return;
+        }
 
-    function deleteLot(id) {
-        if(confirm("Supprimer ?")) {
-            data = data.filter(x => x.id !== id);
-            save();
+        const c = data.find(x => x.id === currentContainerId);
+        if (c) {
+            if (!c.items) c.items = [];
+            c.items.push({ name, expiry });
+            nameInput.value = '';
+            expiryInput.value = '';
+            saveToStorage();
+            renderItems();
         }
     }
 
-    function closeItems() { document.getElementById('items-panel').style.display = 'none'; }
+    function deleteItem(idx) {
+        const c = data.find(x => x.id === currentContainerId);
+        if (c && c.items) {
+            c.items.splice(idx, 1);
+            saveToStorage();
+            renderItems();
+        }
+    }
 
-    window.onload = fetchData;
+    function closeItems() {
+        currentContainerId = null;
+        document.getElementById('items-panel').style.display = 'none';
+    }
+
+    window.onload = renderContainers;
 </script>
 </body>
 </html>
