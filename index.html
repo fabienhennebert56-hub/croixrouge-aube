@@ -11,6 +11,7 @@
             --cr-panel-bg: #1e1e1e;
             --cr-border: #333333;
             --cr-text: #e0e0e0;
+            --cr-alert: #b71c1c; /* Rouge vif pour alertes */
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
@@ -24,6 +25,9 @@
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--cr-border); font-size: 0.9rem; }
         th { background: #181818; color: #aaa; text-transform: uppercase; font-size: 0.75rem; }
 
+        /* Classes pour les lignes de tableaux (alertes dates) */
+        table tr.row-expired { background-color: rgba(183, 28, 28, 0.2); } /* Fond rouge très léger */
+
         .btn { padding: 8px 16px; background-color: var(--cr-red); color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
         .btn-small { padding: 5px 10px; font-size: 0.8rem; margin: 2px; }
         .btn-secondary { background: #333; color: #ccc; }
@@ -32,7 +36,7 @@
         .badge { padding: 4px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; }
         .badge-ok { background: #1b5e20; color: #81c784; }
         .badge-warn { background: #e65100; color: #ffcc80; }
-        .badge-alert { background: #b71c1c; color: #ef9a9a; }
+        .badge-alert { background: var(--cr-alert); color: #fff; } /* Utilisé pour le lot et l'article */
         .badge-secondary { background: #2a2a2a; color: #888; }
         
         .form-inline { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; align-items: center; }
@@ -49,7 +53,7 @@
 
 <header>
     <h1>Gestion Logistique (MOT)</h1>
-    <div style="font-size: 0.8rem; color: #4caf50;">✔ Lots, Quantités, Matériel, Encoches & Modification</div>
+    <div style="font-size: 0.8rem; color: #4caf50;">✔ Lots, Quantités, Matériel, Encoches & Alertes visuelles</div>
 </header>
 
 <div class="panel">
@@ -68,7 +72,7 @@
             <tr>
                 <th>Nom du Lot</th>
                 <th>Encoche</th>
-                <th>Péremption</th>
+                <th>Péremption Globale</th>
                 <th>Validation Physique</th>
                 <th>Actions</th>
             </tr>
@@ -103,6 +107,30 @@
     let data = JSON.parse(localStorage.getItem('cr_data_github') || '[]');
     let currentContainerId = null;
 
+    // --- Utilitaires de dates ---
+    function parseDate(dateStr) {
+        return new Date(dateStr + 'T00:00:00'); // Force l'heure à minuit UTC pour éviter décalages fuseau
+    }
+
+    function isExpired(expiryStr) {
+        if (!expiryStr) return false;
+        const expiry = parseDate(expiryStr);
+        const now = new Date();
+        now.setHours(0, 0, 0, 0); // Aujourd'hui minuit
+        return expiry < now;
+    }
+
+    function isSoonToExpire(expiryStr) {
+        if (!expiryStr) return false;
+        const expiry = parseDate(expiryStr);
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+        const diffTime = expiry - now;
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        return diffDays > 0 && diffDays <= 90; // Entre 1 et 90 jours
+    }
+    // ---------------------------
+
     function saveToStorage() {
         localStorage.setItem('cr_data_github', JSON.stringify(data));
         renderContainers();
@@ -113,20 +141,20 @@
         const expiryInput = document.getElementById('item-expiry');
         expiryInput.disabled = isElec;
         expiryInput.style.opacity = isElec ? '0.3' : '1';
+        if (isElec) expiryInput.value = '';
     }
 
     function getLotStatus(items) {
         if (!items || items.length === 0) return { class: 'badge-secondary', text: 'Vide' };
-        const now = new Date();
-        let worst = 0; 
+        
+        let worst = 0; // 0: OK, 1: Soon, 2: Expired
         items.forEach(i => {
             if (i.isElectronic) return; 
-            const exp = new Date(i.expiry);
-            const diff = (exp - now) / (1000 * 60 * 60 * 24);
-            if (diff < 0) worst = 2;
-            else if (diff < 90 && worst < 1) worst = 1;
+            if (isExpired(i.expiry)) worst = 2;
+            else if (isSoonToExpire(i.expiry) && worst < 1) worst = 1;
         });
-        if (worst === 2) return { class: 'badge-alert', text: 'Périmé !' };
+        
+        if (worst === 2) return { class: 'badge-alert', text: 'Périmé ! (Un ou +)' };
         if (worst === 1) return { class: 'badge-warn', text: 'À surveiller' };
         return { class: 'badge-ok', text: 'Conforme' };
     }
@@ -134,7 +162,7 @@
     function renderContainers() {
         const tbody = document.getElementById('containers-body');
         if (!tbody) return;
-        if (data.length === 0) { tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">Aucun lot.</td></tr>`; return; }
+        if (data.length === 0) { tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#888;">Aucun lot.</td></tr>`; return; }
 
         tbody.innerHTML = data.map(c => {
             const status = getLotStatus(c.items);
@@ -158,7 +186,7 @@
     function addNewLot() {
         const nameInput = document.getElementById('new-lot-name');
         const encocheInput = document.getElementById('new-lot-encoche');
-        if (!nameInput.value.trim()) { alert("Nom requis."); return; }
+        if (!nameInput.value.trim()) { alert("Veuillez entrer un nom de lot."); return; }
         data.push({ id: Date.now(), name: nameInput.value.trim(), encoche: encocheInput.value.trim(), items: [], lastChecked: null });
         nameInput.value = ''; encocheInput.value = '';
         saveToStorage();
@@ -166,13 +194,14 @@
 
     function renameLot(id) {
         const c = data.find(x => x.id === id);
-        const newName = prompt("Nouveau nom du lot :", c.name);
-        const newEncoche = prompt("Nouvelle encoche :", c.encoche || '');
-        if (newName !== null) {
-            c.name = newName.trim();
-            c.encoche = newEncoche.trim();
-            saveToStorage();
-        }
+        const newName = prompt("Modifier le nom du lot :", c.name);
+        if (newName === null) return;
+        const newEncoche = prompt("Modifier l'encoche (ex: E1) :", c.encoche || '');
+        if (newEncoche === null) return;
+
+        c.name = newName.trim();
+        c.encoche = newEncoche.trim();
+        saveToStorage();
     }
 
     function toggleCheck(id) {
@@ -184,7 +213,7 @@
     }
 
     function deleteLot(id) {
-        if (confirm("Supprimer ce lot ?")) {
+        if (confirm("Voulez-vous vraiment supprimer ce lot et tout son contenu ?")) {
             data = data.filter(x => x.id !== id);
             saveToStorage();
             if (currentContainerId === id) closeItems();
@@ -195,7 +224,7 @@
         currentContainerId = id;
         const c = data.find(x => x.id === id);
         document.getElementById('items-panel').style.display = 'block';
-        document.getElementById('items-title').textContent = "Articles : " + c.name + " (" + (c.encoche || "Sans encoche") + ")";
+        document.getElementById('items-title').textContent = "Articles du lot : " + c.name + " (" + (c.encoche || "Sans encoche") + ")";
         renderItems();
         document.getElementById('items-panel').scrollIntoView({ behavior: 'smooth' });
     }
@@ -203,42 +232,73 @@
     function renderItems() {
         const c = data.find(x => x.id === currentContainerId);
         const tbody = document.getElementById('items-body');
-        if (!c || !c.items || c.items.length === 0) { tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;">Vide.</td></tr>`; return; }
-        tbody.innerHTML = c.items.map((i, idx) => `<tr>
-            <td>${i.name}</td><td><strong>${i.qty}</strong></td>
-            <td>${i.isElectronic ? '🔋 Électronique' : i.expiry}</td>
-            <td><button class="btn btn-small btn-edit" onclick="editItem(${idx})">Modif</button> <button class="btn btn-small" style="background:#800;" onclick="deleteItem(${idx})">X</button></td>
-        </tr>`).join('');
+        
+        if (!c || !c.items || c.items.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#888;">Aucun article dans ce lot.</td></tr>`;
+            return;
+        }
+
+        // Optionnel : Trier par date de péremption (les plus proches en premier)
+        c.items.sort((a, b) => {
+            if (a.isElectronic && b.isElectronic) return 0;
+            if (a.isElectronic) return 1;
+            if (b.isElectronic) return -1;
+            return new Date(a.expiry) - new Date(b.expiry);
+        });
+
+        tbody.innerHTML = c.items.map((i, idx) => {
+            let expiryDisplay = '';
+            let rowClass = '';
+            
+            if (i.isElectronic) {
+                expiryDisplay = '🔋 Appareil électronique';
+            } else {
+                const expired = isExpired(i.expiry);
+                const soon = isSoonToExpire(i.expiry);
+                
+                // Formatage de la date (JJ/MM/AAAA)
+                const dateObj = parseDate(i.expiry);
+                const formattedDate = dateObj.toLocaleDateString('fr-FR');
+
+                if (expired) {
+                    expiryDisplay = `<span style="color:#fff;">${formattedDate}</span> <span class="badge badge-alert" style="margin-left:5px;">PÉRIMÉ !</span>`;
+                    rowClass = 'row-expired'; // Classe CSS définie dans <style>
+                } else if (soon) {
+                    expiryDisplay = `<span style="color:#ffcc80;">${formattedDate}</span> <span class="badge badge-warn" style="margin-left:5px;">À surveiller</span>`;
+                } else {
+                    expiryDisplay = formattedDate; // Date normale
+                }
+            }
+
+            return `<tr class="${rowClass}">
+                <td>${i.name}</td>
+                <td><strong>${i.qty}</strong></td>
+                <td>${expiryDisplay}</td>
+                <td>
+                    <button class="btn btn-small btn-edit" onclick="editItem(${idx})">Modifier</button>
+                    <button class="btn btn-small" style="background:#800;" onclick="deleteItem(${idx})">X</button>
+                </td>
+            </tr>`;
+        }).join('');
     }
 
     function addItemToCurrentLot() {
-        const name = document.getElementById('item-name').value.trim();
-        const qty = parseInt(document.getElementById('item-qty').value);
-        const isElectronic = document.getElementById('item-is-electronic').checked;
-        const expiry = document.getElementById('item-expiry').value;
-        if (!name || isNaN(qty) || (!isElectronic && !expiry)) { alert("Champs invalides."); return; }
-        const c = data.find(x => x.id === currentContainerId);
-        c.items.push({ name, qty, expiry: isElectronic ? null : expiry, isElectronic });
-        saveToStorage();
-        renderItems();
-    }
+        const nameInput = document.getElementById('item-name');
+        const qtyInput = document.getElementById('item-qty');
+        const expiryInput = document.getElementById('item-expiry');
+        const elecInput = document.getElementById('item-is-electronic');
+        
+        const name = nameInput.value.trim();
+        const qty = parseInt(qtyInput.value);
+        const isElectronic = elecInput.checked;
+        const expiry = expiryInput.value;
 
-    function editItem(idx) {
-        const c = data.find(x => x.id === currentContainerId);
-        const i = c.items[idx];
-        const n = prompt("Nom :", i.name);
-        if (n !== null) { i.name = n; saveToStorage(); renderItems(); }
-    }
+        if (!name || isNaN(qty) || qty <= 0 || (!isElectronic && !expiry)) {
+            alert("Veuillez remplir correctement le nom, la quantité et soit une date de péremption, soit cocher l'appareil électronique.");
+            return;
+        }
 
-    function deleteItem(idx) {
         const c = data.find(x => x.id === currentContainerId);
-        c.items.splice(idx, 1);
-        saveToStorage();
-        renderItems();
-    }
-
-    function closeItems() { document.getElementById('items-panel').style.display = 'none'; }
-    window.onload = renderContainers;
-</script>
-</body>
-</html>
+        if (c) {
+            if (!c.items) c.items = [];
+            c.items.push({ name, qty, expiry: isElectronic ? null : expiry, isElectronic });
