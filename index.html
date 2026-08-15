@@ -92,7 +92,7 @@
         </label>
         <label class="checkbox-container">
             <input type="checkbox" id="item-no-expiry" onchange="toggleNoExpiryField()">
-            <span>♾️ Sans péremption</span>
+            <span>♾️ Sans date de péremption</span>
         </label>
         <button class="btn" onclick="addItemToCurrentLot()">Ajouter</button>
     </div>
@@ -261,7 +261,7 @@
             if (i.isElectronic) {
                 expiryHtml = '🔋 Électronique';
             } else if (i.noExpiry) {
-                expiryHtml = '♾️ Sans péremption';
+                expiryHtml = '♾️ Sans date de péremption';
             } else {
                 const expDate = parseExpiryDate(i.expiry);
                 if (!expDate || isNaN(expDate)) {
