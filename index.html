@@ -66,7 +66,7 @@
             <div class="panel">
                 <div class="header-actions">
                     <h3>Mes Conteneurs / Catégories</h3>
-                    <button class="btn" onclick="addContainer()">+ Ajouter un conteneur</button>
+                    <button class="btn" onclick="addContainer()">+ Ajouter</button>
                 </div>
                 <table id="containers-table">
                     <thead>
@@ -92,7 +92,6 @@
                     <h4 style="margin-bottom: 10px; font-size: 0.95rem; color: var(--cr-red);">Ajouter du matériel dans ce conteneur</h4>
                     <div class="form-inline">
                         <input type="text" id="item-name" placeholder="Nom de l'article (ex: Pansements)">
-                        <input type="text" id="item-lot" placeholder="N° de lot">
                         <input type="number" id="item-qty" placeholder="Quantité" style="max-width: 110px;">
                         <input type="date" id="item-expiry">
                         <button class="btn" onclick="addItemToContainer()">Ajouter</button>
@@ -103,7 +102,6 @@
                     <thead>
                         <tr>
                             <th>Article</th>
-                            <th>N° de Lot</th>
                             <th>Quantité</th>
                             <th>Péremption</th>
                             <th>État</th>
@@ -144,8 +142,12 @@
                 indicator.textContent = "✔ En ligne (Direct)";
                 indicator.style.color = "#4caf50";
             } catch (e) {
-                indicator.textContent = "⚠ Erreur synchro";
-                indicator.style.color = "#f44336";
+                containers = JSON.parse(localStorage.getItem('cr_containers') || '[]');
+                renderContainers();
+                if(currentContainerId !== null) renderItemsTable();
+                
+                indicator.textContent = "⚠ Mode Local (Secours)";
+                indicator.style.color = "#ff9800";
             }
         }
 
@@ -153,6 +155,10 @@
             const indicator = document.getElementById('sync-indicator');
             indicator.textContent = "💾 Enregistrement...";
             
+            localStorage.setItem('cr_containers', JSON.stringify(containers));
+            renderContainers();
+            if(currentContainerId !== null) renderItemsTable();
+
             try {
                 await fetch(API_URL, {
                     method: 'PUT',
@@ -162,16 +168,16 @@
                     },
                     body: JSON.stringify(containers)
                 });
-                fetchData();
+                indicator.textContent = "✔ En ligne (Direct)";
+                indicator.style.color = "#4caf50";
             } catch (e) {
-                indicator.textContent = "⚠ Échec sauvegarde";
-                indicator.style.color = "#f44336";
+                indicator.textContent = "✔ Enregistré (Local)";
+                indicator.style.color = "#ff9800";
             }
         }
 
         window.onload = function() {
             fetchData();
-            setInterval(fetchData, 5000);
         };
 
         function getStatusInfo(expiryDateStr) {
@@ -213,6 +219,12 @@
             const tbody = document.querySelector('#containers-table tbody');
             if(!tbody) return;
             tbody.innerHTML = '';
+            
+            if(containers.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#888;">Aucun élément pour le moment. Cliquez sur "+ Ajouter" pour commencer.</td></tr>`;
+                return;
+            }
+
             containers.forEach(c => {
                 let globalStatus = getContainerGlobalStatus(c);
                 tbody.innerHTML += `<tr>
@@ -230,16 +242,17 @@
         }
 
         function addContainer() {
-            const name = prompt("Nom du conteneur (ex: Sac B, Véhicule de liaison, Armoire) :");
-            const type = prompt("Type de conteneur (ex: Sac, Véhicule, Stock) :");
-            if(name && type) {
-                containers.push({ id: Date.now(), name, type, items: [] });
-                saveAndSync();
-            }
+            const name = prompt("Nom de l'élément / conteneur :");
+            if(!name) return;
+            const type = prompt("Type (ex: Sac, Véhicule, Stock) :") || "Standard";
+            
+            containers.push({ id: Date.now(), name, type, items: [] });
+            saveAndSync();
         }
 
         function renameContainer(id) {
             const c = containers.find(x => x.id === id);
+            if(!c) return;
             const newName = prompt("Nouveau nom :", c.name);
             if(newName) { 
                 c.name = newName; 
@@ -248,7 +261,7 @@
         }
 
         function deleteContainer(id) {
-            if(confirm("Voulez-vous vraiment supprimer ce conteneur ?")) {
+            if(confirm("Voulez-vous vraiment supprimer cet élément ?")) {
                 containers = containers.filter(x => x.id !== id);
                 saveAndSync();
                 closeManagement();
@@ -277,7 +290,7 @@
             tbody.innerHTML = '';
 
             if(!c || !c.items || c.items.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#888;">Aucun article dans ce conteneur pour le moment.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#888;">Aucun article dans cet élément pour le moment.</td></tr>`;
                 return;
             }
 
@@ -286,7 +299,6 @@
 
                 tbody.innerHTML += `<tr>
                     <td><strong style="color:#fff;">${item.name}</strong></td>
-                    <td>${item.lot}</td>
                     <td>${item.qty}</td>
                     <td>${item.expiry}</td>
                     <td><span class="badge ${statusInfo.class}">${statusInfo.text}</span></td>
@@ -297,7 +309,6 @@
 
         function addItemToContainer() {
             const name = document.getElementById('item-name').value.trim();
-            const lot = document.getElementById('item-lot').value.trim();
             const qty = document.getElementById('item-qty').value.trim();
             const expiry = document.getElementById('item-expiry').value;
 
@@ -308,18 +319,18 @@
 
             const c = containers.find(x => x.id === currentContainerId);
             if(!c.items) c.items = [];
-            c.items.push({ name, lot: lot || 'N/A', qty, expiry });
+            c.items.push({ name, qty, expiry });
 
             saveAndSync();
 
             document.getElementById('item-name').value = '';
-            document.getElementById('item-lot').value = '';
             document.getElementById('item-qty').value = '';
             document.getElementById('item-expiry').value = '';
         }
 
         function deleteItem(index) {
             const c = containers.find(x => x.id === currentContainerId);
+            if(!c) return;
             c.items.splice(index, 1);
             saveAndSync();
         }
