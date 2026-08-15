@@ -11,7 +11,8 @@
             --cr-panel-bg: #1e1e1e;
             --cr-border: #333333;
             --cr-text: #e0e0e0;
-            --cr-alert: #b71c1c; /* Rouge vif pour alertes */
+            --bg-alert: rgba(183, 28, 28, 0.4); /* Rouge très visible pour les périmés */
+            --bg-warn: rgba(230, 81, 0, 0.3);   /* Orange pour à surveiller */
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
@@ -25,19 +26,20 @@
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--cr-border); font-size: 0.9rem; }
         th { background: #181818; color: #aaa; text-transform: uppercase; font-size: 0.75rem; }
 
-        /* Classes pour les lignes de tableaux (alertes dates) */
-        table tr.row-expired { background-color: rgba(183, 28, 28, 0.2); } /* Fond rouge très léger */
+        /* Classes d'état pour les lignes (appliquées par JS) */
+        tr.has-expired { background-color: var(--bg-alert) !important; }
+        tr.has-warn { background-color: var(--bg-warn) !important; }
 
         .btn { padding: 8px 16px; background-color: var(--cr-red); color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
         .btn-small { padding: 5px 10px; font-size: 0.8rem; margin: 2px; }
         .btn-secondary { background: #333; color: #ccc; }
         .btn-edit { background: #1976d2; color: white; }
 
-        .badge { padding: 4px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; }
-        .badge-ok { background: #1b5e20; color: #81c784; }
-        .badge-warn { background: #e65100; color: #ffcc80; }
-        .badge-alert { background: var(--cr-alert); color: #fff; } /* Utilisé pour le lot et l'article */
-        .badge-secondary { background: #2a2a2a; color: #888; }
+        .badge { padding: 4px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; display: inline-block; margin-top: 2px;}
+        .badge-ok { background: #1b5e20; color: #a5d6a7; } /* Vert clair */
+        .badge-warn { background: #e65100; color: #ffcc80; } /* Orange clair */
+        .badge-alert { background: #b71c1c; color: #ffcdd2; } /* Rouge très clair */
+        .badge-secondary { background: #2a2a2a; color: #999; }
         
         .form-inline { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; align-items: center; }
         input[type="text"], input[type="date"], input[type="number"] { padding: 8px; background: #121212; border: 1px solid var(--cr-border); color: #fff; border-radius: 4px; }
@@ -47,20 +49,22 @@
         
         .checkbox-container { display: flex; align-items: center; gap: 6px; background: #181818; padding: 8px 12px; border: 1px solid var(--cr-border); border-radius: 4px; cursor: pointer; color: #ccc; font-size: 0.85rem; }
         .checkbox-container input { cursor: pointer; width: 16px; height: 16px; }
+
+        .urgent-cell { font-weight: bold; }
     </style>
 </head>
 <body>
 
 <header>
     <h1>Gestion Logistique (MOT)</h1>
-    <div style="font-size: 0.8rem; color: #4caf50;">✔ Lots, Quantités, Matériel, Encoches & Alertes visuelles</div>
+    <div style="font-size: 0.8rem; color: #4caf50;">✔ Lots, Quantités, Matériel, Encoches & Alertes</div>
 </header>
 
 <div class="panel">
     <h3>Ajouter un Lot / Conteneur</h3>
     <div class="form-inline">
         <input type="text" id="new-lot-name" placeholder="Nom du lot">
-        <input type="text" id="new-lot-encoche" placeholder="Encoche (ex: E1, A4)" style="width: 100px;">
+        <input type="text" id="new-lot-encoche" placeholder="Emplacement/Encoche" style="width: 140px;">
         <button class="btn" onclick="addNewLot()">+ Créer le lot</button>
     </div>
 </div>
@@ -72,7 +76,7 @@
             <tr>
                 <th>Nom du Lot</th>
                 <th>Encoche</th>
-                <th>Péremption Globale</th>
+                <th>État Stock</th>
                 <th>Validation Physique</th>
                 <th>Actions</th>
             </tr>
@@ -107,29 +111,36 @@
     let data = JSON.parse(localStorage.getItem('cr_data_github') || '[]');
     let currentContainerId = null;
 
-    // --- Utilitaires de dates ---
-    function parseDate(dateStr) {
-        return new Date(dateStr + 'T00:00:00'); // Force l'heure à minuit UTC pour éviter décalages fuseau
+    // --- Moteur de dates ---
+    // Retourne minuit (heure locale) pour une date YYYY-MM-DD
+    function getLocalMidnight(dateStr) {
+        const [year, month, day] = dateStr.split('-').map(Number);
+        return new Date(year, month - 1, day);
     }
 
-    function isExpired(expiryStr) {
-        if (!expiryStr) return false;
-        const expiry = parseDate(expiryStr);
+    function checkDateStatus(expiryStr) {
+        if (!expiryStr) return 'ok'; // Électronique ou pas de date
+        
+        const expiryDate = getLocalMidnight(expiryStr);
         const now = new Date();
-        now.setHours(0, 0, 0, 0); // Aujourd'hui minuit
-        return expiry < now;
-    }
+        now.setHours(0, 0, 0, 0); // Aujourd'hui minuit, heure locale
 
-    function isSoonToExpire(expiryStr) {
-        if (!expiryStr) return false;
-        const expiry = parseDate(expiryStr);
-        const now = new Date();
-        now.setHours(0, 0, 0, 0);
-        const diffTime = expiry - now;
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        return diffDays > 0 && diffDays <= 90; // Entre 1 et 90 jours
+        // Vérification stricte
+        if (expiryDate < now) {
+            return 'expired'; // Date passée
+        }
+
+        // Alerte 3 mois avant (approx 90 jours)
+        const threeMonthsBefore = new Date(expiryDate);
+        threeMonthsBefore.setDate(threeMonthsBefore.getDate() - 90);
+
+        if (now >= threeMonthsBefore) {
+            return 'warn'; // Bientôt périmé
+        }
+
+        return 'ok';
     }
-    // ---------------------------
+    // -----------------------
 
     function saveToStorage() {
         localStorage.setItem('cr_data_github', JSON.stringify(data));
@@ -147,37 +158,50 @@
     function getLotStatus(items) {
         if (!items || items.length === 0) return { class: 'badge-secondary', text: 'Vide' };
         
-        let worst = 0; // 0: OK, 1: Soon, 2: Expired
+        let lotHasExpired = false;
+        let lotHasWarn = false;
+
         items.forEach(i => {
-            if (i.isElectronic) return; 
-            if (isExpired(i.expiry)) worst = 2;
-            else if (isSoonToExpire(i.expiry) && worst < 1) worst = 1;
+            if (i.isElectronic) return;
+            const status = checkDateStatus(i.expiry);
+            if (status === 'expired') lotHasExpired = true;
+            if (status === 'warn') lotHasWarn = true;
         });
-        
-        if (worst === 2) return { class: 'badge-alert', text: 'Périmé ! (Un ou +)' };
-        if (worst === 1) return { class: 'badge-warn', text: 'À surveiller' };
-        return { class: 'badge-ok', text: 'Conforme' };
+
+        if (lotHasExpired) return { class: 'badge-alert', text: '⚠️ Périmé(s)' };
+        if (lotHasWarn) return { class: 'badge-warn', text: '❗ À surveiller' };
+        return { class: 'badge-ok', text: '✅ OK' };
     }
 
     function renderContainers() {
         const tbody = document.getElementById('containers-body');
         if (!tbody) return;
-        if (data.length === 0) { tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#888;">Aucun lot.</td></tr>`; return; }
+        if (data.length === 0) { tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#888;">Aucun lot enregistré.</td></tr>`; return; }
+
+        // Tri optionnel : lots avec alertes en premier
+        data.sort((a, b) => {
+            const statusA = getLotStatus(a.items).class;
+            const statusB = getLotStatus(b.items).class;
+            if (statusA === statusB) return 0;
+            if (statusA === 'badge-alert') return -1; // Alertes en haut
+            if (statusB === 'badge-alert') return 1;
+            return 0;
+        });
 
         tbody.innerHTML = data.map(c => {
             const status = getLotStatus(c.items);
             return `<tr>
                 <td><strong>${c.name}</strong></td>
-                <td>${c.encoche || '-'}</td>
+                <td>${c.encoche || '<span style="color:#555;">Non défini</span>'}</td>
                 <td><span class="badge ${status.class}">${status.text}</span></td>
                 <td>
-                    ${c.lastChecked ? '✅ ' + c.lastChecked : '❌'}
-                    <button class="btn btn-small btn-secondary" onclick="toggleCheck(${c.id})">${c.lastChecked ? 'Dévalider' : 'Valider'}</button>
+                    ${c.lastChecked ? 'Validé le ' + c.lastChecked : '<span style="color:#777;">Non</span>'}
+                    <button class="btn btn-small btn-secondary" style="margin-left:10px;" onclick="toggleCheck(${c.id})">${c.lastChecked ? 'Dévalider' : 'Valider'}</button>
                 </td>
                 <td>
                     <button class="btn btn-small btn-edit" onclick="renameLot(${c.id})">Renommer</button>
                     <button class="btn btn-small" onclick="viewItems(${c.id})">Articles</button>
-                    <button class="btn btn-small" style="background:#800;" onclick="deleteLot(${c.id})">X</button>
+                    <button class="btn btn-small" style="background:#800;" onclick="deleteLot(${c.id})">Suppr</button>
                 </td>
             </tr>`;
         }).join('');
@@ -196,9 +220,8 @@
         const c = data.find(x => x.id === id);
         const newName = prompt("Modifier le nom du lot :", c.name);
         if (newName === null) return;
-        const newEncoche = prompt("Modifier l'encoche (ex: E1) :", c.encoche || '');
+        const newEncoche = prompt("Modifier l'emplacement/encoche :", c.encoche || '');
         if (newEncoche === null) return;
-
         c.name = newName.trim();
         c.encoche = newEncoche.trim();
         saveToStorage();
@@ -213,7 +236,7 @@
     }
 
     function deleteLot(id) {
-        if (confirm("Voulez-vous vraiment supprimer ce lot et tout son contenu ?")) {
+        if (confirm("Voulez-vous vraiment supprimer ce lot ?")) {
             data = data.filter(x => x.id !== id);
             saveToStorage();
             if (currentContainerId === id) closeItems();
@@ -224,7 +247,7 @@
         currentContainerId = id;
         const c = data.find(x => x.id === id);
         document.getElementById('items-panel').style.display = 'block';
-        document.getElementById('items-title').textContent = "Articles du lot : " + c.name + " (" + (c.encoche || "Sans encoche") + ")";
+        document.getElementById('items-title').textContent = "Articles du lot : " + c.name + (c.encoche ? " - " + c.encoche : "");
         renderItems();
         document.getElementById('items-panel').scrollIntoView({ behavior: 'smooth' });
     }
@@ -238,35 +261,35 @@
             return;
         }
 
-        // Optionnel : Trier par date de péremption (les plus proches en premier)
+        // Tri des articles : Périmés > Bientôt périmés > Électronique > OK
         c.items.sort((a, b) => {
-            if (a.isElectronic && b.isElectronic) return 0;
-            if (a.isElectronic) return 1;
-            if (b.isElectronic) return -1;
-            return new Date(a.expiry) - new Date(b.expiry);
+            const statusA = checkDateStatus(a.expiry);
+            const statusB = checkDateStatus(b.expiry);
+            const priority = { expired: 0, warn: 1, ok: 2 };
+            return priority[statusA] - priority[statusB];
         });
 
         tbody.innerHTML = c.items.map((i, idx) => {
             let expiryDisplay = '';
             let rowClass = '';
-            
+            let dateStatus = 'ok';
+
             if (i.isElectronic) {
-                expiryDisplay = '🔋 Appareil électronique';
+                expiryDisplay = '🔋 Électronique';
+                dateStatus = 'ok';
             } else {
-                const expired = isExpired(i.expiry);
-                const soon = isSoonToExpire(i.expiry);
-                
-                // Formatage de la date (JJ/MM/AAAA)
-                const dateObj = parseDate(i.expiry);
+                dateStatus = checkDateStatus(i.expiry);
+                const dateObj = getLocalMidnight(i.expiry);
                 const formattedDate = dateObj.toLocaleDateString('fr-FR');
 
-                if (expired) {
-                    expiryDisplay = `<span style="color:#fff;">${formattedDate}</span> <span class="badge badge-alert" style="margin-left:5px;">PÉRIMÉ !</span>`;
-                    rowClass = 'row-expired'; // Classe CSS définie dans <style>
-                } else if (soon) {
-                    expiryDisplay = `<span style="color:#ffcc80;">${formattedDate}</span> <span class="badge badge-warn" style="margin-left:5px;">À surveiller</span>`;
+                if (dateStatus === 'expired') {
+                    expiryDisplay = `<span class="urgent-cell">${formattedDate}</span> <span class="badge badge-alert">PÉRIMÉ !</span>`;
+                    rowClass = 'has-expired'; // Appliqué sur la ligne
+                } else if (dateStatus === 'warn') {
+                    expiryDisplay = `${formattedDate} <span class="badge badge-warn">À surveiller</span>`;
+                    rowClass = 'has-warn'; // Appliqué sur la ligne
                 } else {
-                    expiryDisplay = formattedDate; // Date normale
+                    expiryDisplay = formattedDate;
                 }
             }
 
@@ -282,23 +305,4 @@
         }).join('');
     }
 
-    function addItemToCurrentLot() {
-        const nameInput = document.getElementById('item-name');
-        const qtyInput = document.getElementById('item-qty');
-        const expiryInput = document.getElementById('item-expiry');
-        const elecInput = document.getElementById('item-is-electronic');
-        
-        const name = nameInput.value.trim();
-        const qty = parseInt(qtyInput.value);
-        const isElectronic = elecInput.checked;
-        const expiry = expiryInput.value;
-
-        if (!name || isNaN(qty) || qty <= 0 || (!isElectronic && !expiry)) {
-            alert("Veuillez remplir correctement le nom, la quantité et soit une date de péremption, soit cocher l'appareil électronique.");
-            return;
-        }
-
-        const c = data.find(x => x.id === currentContainerId);
-        if (c) {
-            if (!c.items) c.items = [];
-            c.items.push({ name, qty, expiry: isElectronic ? null : expiry, isElectronic });
+    function addItemTo
