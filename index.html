@@ -25,7 +25,7 @@
         th { background: #181818; color: #aaa; text-transform: uppercase; font-size: 0.75rem; }
 
         /* Style pour les lignes d'articles périmés */
-        tr.row-expired { background-color: rgba(183, 28, 28, 0.25); }
+        tr.row-expired { background-color: rgba(183, 28, 28, 0.25) !important; }
 
         .btn { padding: 8px 16px; background-color: var(--cr-red); color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
         .btn-small { padding: 5px 10px; font-size: 0.8rem; margin: 2px; }
@@ -90,6 +90,10 @@
             <input type="checkbox" id="item-is-electronic" onchange="toggleExpiryField()">
             <span>🔋 Électronique</span>
         </label>
+        <label class="checkbox-container">
+            <input type="checkbox" id="item-no-expiry" onchange="toggleNoExpiryField()">
+            <span>♾️ Sans péremption</span>
+        </label>
         <button class="btn" onclick="addItemToCurrentLot()">Ajouter</button>
     </div>
 
@@ -113,9 +117,44 @@
 
     function toggleExpiryField() {
         const isElec = document.getElementById('item-is-electronic').checked;
+        const noExpiry = document.getElementById('item-no-expiry');
         const expiryInput = document.getElementById('item-expiry');
-        expiryInput.disabled = isElec;
-        expiryInput.style.opacity = isElec ? '0.3' : '1';
+        
+        if (isElec && noExpiry.checked) {
+            noExpiry.checked = false;
+        }
+        
+        const disabled = isElec || noExpiry.checked;
+        expiryInput.disabled = disabled;
+        expiryInput.style.opacity = disabled ? '0.3' : '1';
+    }
+
+    function toggleNoExpiryField() {
+        const noExpiry = document.getElementById('item-no-expiry').checked;
+        const isElec = document.getElementById('item-is-electronic');
+        const expiryInput = document.getElementById('item-expiry');
+        
+        if (noExpiry && isElec.checked) {
+            isElec.checked = false;
+        }
+        
+        const disabled = noExpiry || isElec.checked;
+        expiryInput.disabled = disabled;
+        expiryInput.style.opacity = disabled ? '0.3' : '1';
+    }
+
+    function parseExpiryDate(expiryStr) {
+        if (!expiryStr) return null;
+        if (expiryStr.includes('-')) {
+            return new Date(expiryStr + 'T00:00:00');
+        }
+        if (expiryStr.includes('/')) {
+            const parts = expiryStr.split('/');
+            if (parts.length === 3) {
+                return new Date(`${parts[2]}-${parts[1]}-${parts[0]}T00:00:00`);
+            }
+        }
+        return new Date(expiryStr);
     }
 
     function getLotStatus(items) {
@@ -126,8 +165,9 @@
         
         let worst = 0; 
         items.forEach(i => {
-            if (i.isElectronic) return; 
-            const exp = new Date(i.expiry + 'T00:00:00');
+            if (i.isElectronic || i.noExpiry) return; 
+            const exp = parseExpiryDate(i.expiry);
+            if (!exp || isNaN(exp)) return;
             const diff = (exp - now) / (1000 * 60 * 60 * 24);
             if (diff < 0) worst = 2;
             else if (diff < 90 && worst < 1) worst = 1;
@@ -220,18 +260,24 @@
 
             if (i.isElectronic) {
                 expiryHtml = '🔋 Électronique';
+            } else if (i.noExpiry) {
+                expiryHtml = '♾️ Sans péremption';
             } else {
-                const expDate = new Date(i.expiry + 'T00:00:00');
-                const diffDays = (expDate - now) / (1000 * 60 * 60 * 24);
-                const formattedDate = expDate.toLocaleDateString('fr-FR');
-
-                if (diffDays < 0) {
-                    expiryHtml = `${formattedDate} <span class="badge badge-alert" style="margin-left: 8px;">PÉRIMÉ !</span>`;
-                    rowClass = 'row-expired';
-                } else if (diffDays < 90) {
-                    expiryHtml = `${formattedDate} <span class="badge badge-warn" style="margin-left: 8px;">À surveiller</span>`;
+                const expDate = parseExpiryDate(i.expiry);
+                if (!expDate || isNaN(expDate)) {
+                    expiryHtml = i.expiry || '-';
                 } else {
-                    expiryHtml = `<span style="color: #81c784;">${formattedDate}</span>`;
+                    const diffDays = (expDate - now) / (1000 * 60 * 60 * 24);
+                    const formattedDate = expDate.toLocaleDateString('fr-FR');
+
+                    if (diffDays < 0) {
+                        expiryHtml = `${formattedDate} <span class="badge badge-alert" style="margin-left: 8px;">PÉRIMÉ !</span>`;
+                        rowClass = 'row-expired';
+                    } else if (diffDays < 90) {
+                        expiryHtml = `${formattedDate} <span class="badge badge-warn" style="margin-left: 8px;">À surveiller</span>`;
+                    } else {
+                        expiryHtml = `<span style="color: #81c784;">${formattedDate}</span>`;
+                    }
                 }
             }
 
@@ -251,10 +297,19 @@
         const name = document.getElementById('item-name').value.trim();
         const qty = parseInt(document.getElementById('item-qty').value);
         const isElectronic = document.getElementById('item-is-electronic').checked;
+        const noExpiry = document.getElementById('item-no-expiry').checked;
         const expiry = document.getElementById('item-expiry').value;
-        if (!name || isNaN(qty) || (!isElectronic && !expiry)) { alert("Champs invalides."); return; }
+        
+        if (!name || isNaN(qty) || (!isElectronic && !noExpiry && !expiry)) { alert("Champs invalides."); return; }
+        
         const c = data.find(x => x.id === currentContainerId);
-        c.items.push({ name, qty, expiry: isElectronic ? null : expiry, isElectronic });
+        c.items.push({ 
+            name, 
+            qty, 
+            expiry: (isElectronic || noExpiry) ? null : expiry, 
+            isElectronic, 
+            noExpiry 
+        });
         saveToStorage();
         renderItems();
     }
