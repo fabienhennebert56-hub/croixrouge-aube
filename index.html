@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Logistique - Croix-Rouge (MAT Live)</title>
+    <title>Logistique - Croix-Rouge (MAT)</title>
     <style>
         :root {
             --cr-red: #cc0000;
@@ -16,394 +16,200 @@
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { background-color: var(--cr-dark-bg); color: var(--cr-text); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        body { background-color: var(--cr-dark-bg); color: var(--cr-text); padding: 20px; }
 
-        #app-screen { display: flex; flex-direction: column; height: 100vh; }
-        header { background: var(--cr-panel-bg); border-bottom: 3px solid var(--cr-red); padding: 15px 25px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
-        header h1 { font-size: 1.4rem; color: #fff; display: flex; align-items: center; gap: 10px; }
-        header h1 span { color: var(--cr-red); }
+        .panel { background: var(--cr-panel-bg); border: 1px solid var(--cr-border); border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+        header { border-bottom: 3px solid var(--cr-red); padding-bottom: 10px; margin-bottom: 20px; }
+        header h1 { color: #fff; font-size: 1.5rem; }
 
-        /* Navigation entre les onglets */
-        .nav-tabs { display: flex; gap: 10px; background: #181818; padding: 10px 25px; border-bottom: 1px solid var(--cr-border); }
-        .tab-btn { background: transparent; border: none; color: var(--cr-text-muted); padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.9rem; transition: all 0.2s; }
-        .tab-btn:hover { color: #fff; background: #252525; }
-        .tab-btn.active { background: var(--cr-red); color: #fff; }
-        
-        .tab-pane { display: none; flex: 1; padding: 20px; overflow-y: auto; }
-        .tab-pane.active { display: block; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--cr-border); font-size: 0.9rem; }
+        th { background: #181818; color: #aaa; text-transform: uppercase; font-size: 0.75rem; }
 
-        .panel { background: var(--cr-panel-bg); border: 1px solid var(--cr-border); border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
-        .header-actions { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px; }
-        .header-actions h3 { color: #fff; font-size: 1.1rem; }
-        
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { padding: 12px 10px; text-align: left; border-bottom: 1px solid var(--cr-border); font-size: 0.9rem; }
-        th { background: #181818; color: #aaa; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.05em; }
-        
-        .btn { padding: 8px 16px; background-color: var(--cr-red); color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; transition: background 0.2s; }
-        .btn:hover { background-color: var(--cr-dark-red); }
+        .btn { padding: 8px 16px; background-color: var(--cr-red); color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
         .btn-small { padding: 5px 10px; font-size: 0.8rem; }
         .btn-secondary { background: #333; color: #ccc; }
-        .btn-secondary:hover { background: #444; color: #fff; }
 
-        .form-inline { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
-        .form-inline input { padding: 9px 12px; background: #121212; border: 1px solid var(--cr-border); color: #fff; border-radius: 4px; flex: 1; min-width: 140px; font-size: 0.9rem; }
-        .form-inline input:focus { outline: none; border-color: var(--cr-red); }
-
-        /* Style pour l'onglet texte / notes */
-        .notes-container { display: flex; flex-direction: column; height: calc(100vh - 180px); }
-        .notes-textarea { flex: 1; width: 100%; background: #121212; color: #fff; border: 1px solid var(--cr-border); border-radius: 6px; padding: 15px; font-size: 1rem; resize: none; line-height: 1.5; }
-        .notes-textarea:focus { outline: none; border-color: var(--cr-red); }
-        .notes-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
-
-        .badge { padding: 5px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; display: inline-block; }
-        .badge-ok { background-color: rgba(30, 70, 32, 0.6); color: #4caf50; border: 1px solid #2e7d32; }
-        .badge-warn { background-color: rgba(88, 62, 28, 0.6); color: #ff9800; border: 1px solid #ef6c00; }
-        .badge-alert { background-color: rgba(81, 28, 28, 0.6); color: #f44336; border: 1px solid #c62828; }
-        .badge-secondary { background-color: #2a2a2a; color: #888; border: 1px solid #444; }
+        .badge { padding: 4px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; }
+        .badge-ok { background: #1b5e20; color: #81c784; }
+        .badge-warn { background: #e65100; color: #ffcc80; }
+        .badge-alert { background: #b71c1c; color: #ef9a9a; }
+        .badge-secondary { background: #2a2a2a; color: #888; }
         
-        #sync-indicator { font-size: 0.8rem; padding: 5px 10px; border-radius: 4px; background: #121212; border: 1px solid var(--cr-border); color: #aaa; font-weight: 500; }
+        .form-inline { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+        input { padding: 8px; background: #121212; border: 1px solid var(--cr-border); color: #fff; border-radius: 4px; }
     </style>
 </head>
 <body>
 
-    <div id="app-screen">
-        <header>
-            <h1><span>✚</span> Gestion Logistique (MAT)</h1>
-            <div style="display: flex; align-items: center; gap: 10px;">
-                <span id="sync-indicator">Connexion au cloud...</span>
-                <button class="btn btn-secondary btn-small" onclick="fetchData()">🔄 Actualiser</button>
-            </div>
-        </header>
+<header>
+    <h1>Gestion Logistique (MAT)</h1>
+    <div id="sync-status" style="font-size: 0.8rem; color: var(--cr-text-muted);">Initialisation...</div>
+</header>
 
-        <!-- Barre de navigation des onglets -->
-        <div class="nav-tabs">
-            <button class="tab-btn active" onclick="switchTab('logistics-tab', this)">📦 Logistique & Matériel</button>
-            <button class="tab-btn" onclick="switchTab('notes-tab', this)">📝 Notes & Texte libre</button>
-        </div>
-
-        <!-- ONGLET 1 : LOGISTIQUE -->
-        <div id="logistics-tab" class="tab-pane active">
-            <div class="panel">
-                <div class="header-actions">
-                    <h3>Mes Conteneurs / Catégories</h3>
-                    <button class="btn" onclick="addContainer()">+ Ajouter</button>
-                </div>
-                <table id="containers-table">
-                    <thead>
-                        <tr>
-                            <th>Nom du conteneur</th>
-                            <th>Type</th>
-                            <th>Articles</th>
-                            <th>État Global</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-            </div>
-
-            <div id="management-panel" class="panel" style="display: none; border-color: var(--cr-red);">
-                <div class="header-actions">
-                    <h3 id="management-title">Gestion du conteneur</h3>
-                    <button class="btn btn-secondary btn-small" onclick="closeManagement()">← Retour à la liste</button>
-                </div>
-
-                <div style="background: #121212; padding: 15px; border-radius: 6px; margin-bottom: 15px; border: 1px solid var(--cr-border);">
-                    <h4 style="margin-bottom: 10px; font-size: 0.95rem; color: var(--cr-red);">Ajouter du matériel dans ce conteneur</h4>
-                    <div class="form-inline">
-                        <input type="text" id="item-name" placeholder="Nom de l'article (ex: Pansements)">
-                        <input type="number" id="item-qty" placeholder="Quantité" style="max-width: 110px;">
-                        <input type="date" id="item-expiry">
-                        <button class="btn" onclick="addItemToContainer()">Ajouter</button>
-                    </div>
-                </div>
-
-                <table id="items-table">
-                    <thead>
-                        <tr>
-                            <th>Article</th>
-                            <th>Quantité</th>
-                            <th>Péremption</th>
-                            <th>État</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- ONGLET 2 : NOTES / TEXTE LIBRE -->
-        <div id="notes-tab" class="tab-pane">
-            <div class="panel notes-container" style="height: 100%; border-color: var(--cr-red);">
-                <div class="header-actions">
-                    <h3>Bloc-notes & Informations importantes</h3>
-                    <span id="notes-status" style="font-size: 0.8rem; color: var(--cr-text-muted);">Enregistrement automatique</span>
-                </div>
-                <textarea id="free-notes" class="notes-textarea" placeholder="Écrivez vos notes, consignes, rappels ou listes ici... Tout est sauvegardé automatiquement sur votre appareil." oninput="saveNotes()"></textarea>
-            </div>
-        </div>
+<div class="panel">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h3>Conteneurs & Lots</h3>
+        <button class="btn" onclick="addContainer()">+ Ajouter un Lot</button>
     </div>
+    <table id="containers-table">
+        <thead>
+            <tr>
+                <th>Nom du Lot</th>
+                <th>Péremption</th>
+                <th>Validation Physique</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="containers-body"></tbody>
+    </table>
+</div>
 
-    <script>
-        const BIN_ID = "665f839fe41b4d34e4053f3e";
-        const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
-        const API_KEY = '$2a$10$wU0u/L4y9N/yv5L.9.9sSe5gYJ9j.T4.g7.5u3QpG1zXz9t.9nZJ.';
+<div id="items-panel" class="panel" style="display: none;">
+    <h3 id="items-title">Articles dans le lot</h3>
+    <div class="form-inline">
+        <input type="text" id="item-name" placeholder="Nom article">
+        <input type="date" id="item-expiry">
+        <button class="btn" onclick="addItem()">Ajouter Article</button>
+    </div>
+    <table id="items-table">
+        <thead>
+            <tr>
+                <th>Article</th>
+                <th>Date Péremption</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody id="items-body"></tbody>
+    </table>
+    <button class="btn btn-secondary" onclick="closeItems()" style="margin-top: 15px;">Fermer</button>
+</div>
 
-        let containers = [];
-        let currentContainerId = null;
+<script>
+    const BIN_ID = "665f839fe41b4d34e4053f3e";
+    const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
+    const API_KEY = '$2a$10$wU0u/L4y9N/yv5L.9.9sSe5gYJ9j.T4.g7.5u3QpG1zXz9t.9nZJ.';
 
-        // Gestion des onglets
-        function switchTab(tabId, btnElement) {
-            document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
-            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-            
-            document.getElementById(tabId).classList.add('active');
-            btnElement.classList.add('active');
+    let data = JSON.parse(localStorage.getItem('cr_data') || '[]');
+    let currentContainerId = null;
+
+    async function fetchData() {
+        try {
+            const response = await fetch(API_URL, { headers: { 'X-Master-Key': API_KEY } });
+            const json = await response.json();
+            data = json.record;
+            render();
+            document.getElementById('sync-status').textContent = "✔ À jour (Cloud)";
+        } catch (e) {
+            document.getElementById('sync-status').textContent = "⚠ Hors-ligne (Local)";
         }
+    }
 
-        // Sauvegarde des notes dans le stockage local
-        function saveNotes() {
-            const notesContent = document.getElementById('free-notes').value;
-            localStorage.setItem('cr_free_notes', notesContent);
-            const status = document.getElementById('notes-status');
-            status.textContent = "✔ Mod modificaciones enregistrées";
-            setTimeout(() => { status.textContent = "Enregistré"; }, 1500);
-        }
-
-        async function fetchData() {
-            const indicator = document.getElementById('sync-indicator');
-            indicator.textContent = "🔄 Synchro...";
-            indicator.style.color = "#ff9800";
-            
-            // Charger les notes locales immédiatement
-            const savedNotes = localStorage.getItem('cr_free_notes');
-            if(savedNotes !== null) {
-                document.getElementById('free-notes').value = savedNotes;
-            }
-
-            try {
-                const response = await fetch(API_URL, {
-                    headers: { 'X-Master-Key': API_KEY }
-                });
-                const json = await response.json();
-                containers = json.record || [];
-                
-                renderContainers();
-                if(currentContainerId !== null) {
-                    renderItemsTable();
-                }
-                
-                indicator.textContent = "✔ En ligne (Direct)";
-                indicator.style.color = "#4caf50";
-            } catch (e) {
-                containers = JSON.parse(localStorage.getItem('cr_containers') || '[]');
-                renderContainers();
-                if(currentContainerId !== null) renderItemsTable();
-                
-                indicator.textContent = "⚠ Mode Local (Secours)";
-                indicator.style.color = "#ff9800";
-            }
-        }
-
-        async function saveAndSync() {
-            const indicator = document.getElementById('sync-indicator');
-            indicator.textContent = "💾 Enregistrement...";
-            
-            localStorage.setItem('cr_containers', JSON.stringify(containers));
-            renderContainers();
-            if(currentContainerId !== null) renderItemsTable();
-
-            try {
-                await fetch(API_URL, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-Master-Key': API_KEY
-                    },
-                    body: JSON.stringify(containers)
-                });
-                indicator.textContent = "✔ En ligne (Direct)";
-                indicator.style.color = "#4caf50";
-            } catch (e) {
-                indicator.textContent = "✔ Enregistré (Local)";
-                indicator.style.color = "#ff9800";
-            }
-        }
-
-        window.onload = function() {
-            fetchData();
-        };
-
-        function getStatusInfo(expiryDateStr) {
-            const today = new Date();
-            let expiryDate = new Date(expiryDateStr);
-            let diffTime = expiryDate - today;
-            let diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            
-            if (isNaN(expiryDate.getTime())) {
-                return { level: 0, text: 'Non spécifié', class: 'badge-secondary' };
-            } else if (diffDays < 0) {
-                return { level: 2, text: 'Périmé !', class: 'badge-alert' };
-            } else if (diffDays < 90) {
-                return { level: 1, text: 'Expire bientôt', class: 'badge-warn' };
-            } else {
-                return { level: 0, text: 'OK', class: 'badge-ok' };
-            }
-        }
-
-        function getContainerGlobalStatus(container) {
-            if (!container.items || container.items.length === 0) {
-                return { text: 'Vide', class: 'badge-secondary' };
-            }
-
-            let maxLevel = 0;
-            container.items.forEach(item => {
-                let info = getStatusInfo(item.expiry);
-                if (info.level > maxLevel) {
-                    maxLevel = info.level;
-                }
+    async function save() {
+        localStorage.setItem('cr_data', JSON.stringify(data));
+        render();
+        try {
+            await fetch(API_URL, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'X-Master-Key': API_KEY },
+                body: JSON.stringify(data)
             });
+        } catch (e) {}
+    }
 
-            if (maxLevel === 2) return { text: '❌ Alerte (Périmé)', class: 'badge-alert' };
-            if (maxLevel === 1) return { text: '⚠️ À surveiller', class: 'badge-warn' };
-            return { text: '✔ Conforme', class: 'badge-ok' };
+    function getLotStatus(items) {
+        if (!items || items.length === 0) return { class: 'badge-secondary', text: 'Vide' };
+        const now = new Date();
+        let worst = 0; // 0: OK, 1: Warn, 2: Alert
+        items.forEach(i => {
+            const exp = new Date(i.expiry);
+            const diff = (exp - now) / (1000 * 60 * 60 * 24);
+            if (diff < 0) worst = 2;
+            else if (diff < 90 && worst < 1) worst = 1;
+        });
+        if (worst === 2) return { class: 'badge-alert', text: 'Périmé !' };
+        if (worst === 1) return { class: 'badge-warn', text: 'À surveiller' };
+        return { class: 'badge-ok', text: 'Conforme' };
+    }
+
+    function render() {
+        const tbody = document.getElementById('containers-body');
+        tbody.innerHTML = data.map(c => {
+            const status = getLotStatus(c.items);
+            return `<tr>
+                <td><strong>${c.name}</strong></td>
+                <td><span class="badge ${status.class}">${status.text}</span></td>
+                <td>
+                    ${c.lastChecked ? '✅ ' + c.lastChecked : '❌ Non vérifié'}
+                    <button class="btn btn-small btn-secondary" style="margin-left:10px;" onclick="toggleCheck(${c.id})">${c.lastChecked ? 'Dévalider' : 'Valider'}</button>
+                </td>
+                <td>
+                    <button class="btn btn-small" onclick="viewItems(${c.id})">Gérer</button>
+                    <button class="btn btn-small" style="background:#800;" onclick="deleteLot(${c.id})">Suppr</button>
+                </td>
+            </tr>`;
+        }).join('');
+    }
+
+    function addContainer() {
+        const name = prompt("Nom du nouveau lot :");
+        if (name) {
+            data.push({ id: Date.now(), name, items: [], lastChecked: null });
+            save();
         }
+    }
 
-        function renderContainers() {
-            const tbody = document.querySelector('#containers-table tbody');
-            if(!tbody) return;
-            tbody.innerHTML = '';
-            
-            if(containers.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#888;">Aucun élément pour le moment. Cliquez sur "+ Ajouter" pour commencer.</td></tr>`;
-                return;
-            }
+    function toggleCheck(id) {
+        const c = data.find(x => x.id === id);
+        c.lastChecked = c.lastChecked ? null : new Date().toLocaleString();
+        save();
+    }
 
-            containers.forEach(c => {
-                let globalStatus = getContainerGlobalStatus(c);
-                tbody.innerHTML += `<tr>
-                    <td><strong style="color:#fff;">${c.name}</strong></td>
-                    <td>${c.type}</td>
-                    <td>${c.items ? c.items.length : 0} article(s)</td>
-                    <td><span class="badge ${globalStatus.class}">${globalStatus.text}</span></td>
-                    <td>
-                        <button class="btn btn-small" onclick="manageContainer(${c.id})">Gérer</button>
-                        <button class="btn btn-small btn-secondary" onclick="renameContainer(${c.id})">Renommer</button>
-                        <button class="btn btn-small" style="background:#800;" onclick="deleteContainer(${c.id})">Supprimer</button>
-                    </td>
-                </tr>`;
-            });
+    function viewItems(id) {
+        currentContainerId = id;
+        document.getElementById('items-panel').style.display = 'block';
+        document.getElementById('items-title').textContent = "Articles du lot : " + data.find(c => c.id === id).name;
+        renderItems();
+    }
+
+    function renderItems() {
+        const c = data.find(x => x.id === currentContainerId);
+        const tbody = document.getElementById('items-body');
+        tbody.innerHTML = c.items.map((i, idx) => `<tr>
+            <td>${i.name}</td>
+            <td>${i.expiry}</td>
+            <td><button class="btn btn-small" style="background:#800;" onclick="deleteItem(${idx})">X</button></td>
+        </tr>`).join('');
+    }
+
+    function addItem() {
+        const name = document.getElementById('item-name').value;
+        const expiry = document.getElementById('item-expiry').value;
+        if (!name || !expiry) return alert("Remplissez tout");
+        data.find(c => c.id === currentContainerId).items.push({ name, expiry });
+        document.getElementById('item-name').value = '';
+        save();
+        renderItems();
+        render();
+    }
+
+    function deleteItem(idx) {
+        data.find(c => c.id === currentContainerId).items.splice(idx, 1);
+        save();
+        renderItems();
+        render();
+    }
+
+    function deleteLot(id) {
+        if(confirm("Supprimer ?")) {
+            data = data.filter(x => x.id !== id);
+            save();
         }
+    }
 
-        function addContainer() {
-            const name = prompt("Nom de l'élément / conteneur :");
-            if(!name) return;
-            const type = prompt("Type (ex: Sac, Véhicule, Stock) :") || "Standard";
-            
-            containers.push({ id: Date.now(), name, type, items: [] });
-            saveAndSync();
-        }
+    function closeItems() { document.getElementById('items-panel').style.display = 'none'; }
 
-        function renameContainer(id) {
-            const c = containers.find(x => x.id === id);
-            if(!c) return;
-            const newName = prompt("Nouveau nom :", c.name);
-            if(newName) { 
-                c.name = newName; 
-                saveAndSync();
-            }
-        }
-
-        function deleteContainer(id) {
-            if(confirm("Voulez-vous vraiment supprimer cet élément ?")) {
-                containers = containers.filter(x => x.id !== id);
-                saveAndSync();
-                closeManagement();
-            }
-        }
-
-        function manageContainer(id) {
-            currentContainerId = id;
-            const c = containers.find(x => x.id === id);
-            if(!c) return;
-            document.getElementById('management-title').textContent = `Gestion de : ${c.name} (${c.type})`;
-            document.getElementById('management-panel').style.display = 'block';
-            renderItemsTable();
-            document.getElementById('management-panel').scrollIntoView({ behavior: 'smooth' });
-        }
-
-        function closeManagement() {
-            currentContainerId = null;
-            document.getElementById('management-panel').style.display = 'none';
-        }
-
-        function renderItemsTable() {
-            const c = containers.find(x => x.id === currentContainerId);
-            const tbody = document.querySelector('#items-table tbody');
-            if(!tbody) return;
-            tbody.innerHTML = '';
-
-            if(!c || !c.items || c.items.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#888;">Aucun article dans cet élément pour le moment.</td></tr>`;
-                return;
-            }
-
-            c.items.forEach((item, index) => {
-                let statusInfo = getStatusInfo(item.expiry);
-
-                tbody.innerHTML += `<tr>
-                    <td><strong style="color:#fff;">${item.name}</strong></td>
-                    <td>${item.qty}</td>
-                    <td>${item.expiry}</td>
-                    <td><span class="badge ${statusInfo.class}">${statusInfo.text}</span></td>
-                    <td><button class="btn btn-small" style="background:#800;" onclick="deleteItem(${index})">Retirer</button></td>
-                </tr>`;
-            });
-        }
-
-        function addItemToContainer() {
-            const nameEl = document.getElementById('item-name');
-            const qtyEl = document.getElementById('item-qty');
-            const expiryEl = document.getElementById('item-expiry');
-
-            if (!nameEl || !qtyEl || !expiryEl) {
-                alert("Erreur technique : champs introuvables.");
-                return;
-            }
-
-            const name = nameEl.value.trim();
-            const qty = qtyEl.value.trim();
-            const expiry = expiryEl.value;
-
-            if(!name || !qty || !expiry) {
-                alert("Veuillez remplir le nom, la quantité et la date de péremption.");
-                return;
-            }
-
-            const c = containers.find(x => x.id === currentContainerId);
-            if (!c) {
-                alert("Erreur : aucun conteneur sélectionné.");
-                return;
-            }
-
-            if(!c.items) c.items = [];
-            c.items.push({ name, qty, expiry });
-
-            saveAndSync();
-
-            nameEl.value = '';
-            qtyEl.value = '';
-            expiryEl.value = '';
-        }
-
-        function deleteItem(index) {
-            const c = containers.find(x => x.id === currentContainerId);
-            if(!c) return;
-            c.items.splice(index, 1);
-            saveAndSync();
-        }
-    </script>
+    window.onload = fetchData;
+</script>
 </body>
 </html>
