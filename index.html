@@ -34,15 +34,17 @@
         .badge-alert { background: #b71c1c; color: #ef9a9a; }
         .badge-secondary { background: #2a2a2a; color: #888; }
         
-        .form-inline { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
-        input { padding: 8px; background: #121212; border: 1px solid var(--cr-border); color: #fff; border-radius: 4px; flex: 1; min-width: 200px; }
+        .form-inline { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; align-items: center; }
+        input[type="text"], input[type="date"], input[type="number"] { padding: 8px; background: #121212; border: 1px solid var(--cr-border); color: #fff; border-radius: 4px; flex: 1; min-width: 150px; }
+        input[type="number"] { max-width: 90px; }
+        .checkbox-label { display: flex; align-items: center; gap: 5px; font-size: 0.85rem; cursor: pointer; color: #ccc; }
     </style>
 </head>
 <body>
 
 <header>
     <h1>Gestion Logistique (MOT)</h1>
-    <div style="font-size: 0.8rem; color: #4caf50;">✔ Prêt pour GitHub & Utilisation Terrain</div>
+    <div style="font-size: 0.8rem; color: #4caf50;">✔ Gestion lots, quantités & matériel</div>
 </header>
 
 <div class="panel">
@@ -71,15 +73,20 @@
 <div id="items-panel" class="panel" style="display: none;">
     <h3 id="items-title">Articles dans le lot</h3>
     <div class="form-inline">
-        <input type="text" id="item-name" placeholder="Nom de l'article">
-        <input type="date" id="item-expiry">
+        <input type="text" id="item-name" placeholder="Nom de l'article ou appareil">
+        <input type="number" id="item-qty" placeholder="Qté" min="1" value="1">
+        <input type="date" id="item-expiry" placeholder="Date de péremption">
+        <label class="checkbox-label">
+            <input type="checkbox" id="item-is-electronic" onchange="toggleExpiryField()"> 🔋 Électronique
+        </label>
         <button class="btn" onclick="addItemToCurrentLot()">Ajouter Article</button>
     </div>
     <table id="items-table">
         <thead>
             <tr>
                 <th>Article</th>
-                <th>Date Péremption</th>
+                <th>Quantité</th>
+                <th>Date Péremption / Type</th>
                 <th>Action</th>
             </tr>
         </thead>
@@ -97,11 +104,25 @@
         renderContainers();
     }
 
+    function toggleExpiryField() {
+        const isElec = document.getElementById('item-is-electronic').checked;
+        const expiryInput = document.getElementById('item-expiry');
+        if (isElec) {
+            expiryInput.value = '';
+            expiryInput.disabled = true;
+            expiryInput.style.opacity = '0.4';
+        } else {
+            expiryInput.disabled = false;
+            expiryInput.style.opacity = '1';
+        }
+    }
+
     function getLotStatus(items) {
         if (!items || items.length === 0) return { class: 'badge-secondary', text: 'Vide' };
         const now = new Date();
         let worst = 0; 
         items.forEach(i => {
+            if (i.isElectronic) return; // Ignore les appareils électroniques pour la péremption
             const exp = new Date(i.expiry);
             const diff = (exp - now) / (1000 * 60 * 60 * 24);
             if (diff < 0) worst = 2;
@@ -179,33 +200,45 @@
         const c = data.find(x => x.id === currentContainerId);
         const tbody = document.getElementById('items-body');
         if (!c || !c.items || c.items.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; color:#888;">Aucun article dans ce lot.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#888;">Aucun article dans ce lot.</td></tr>`;
             return;
         }
         tbody.innerHTML = c.items.map((i, idx) => `<tr>
             <td>${i.name}</td>
-            <td>${i.expiry}</td>
+            <td><strong>${i.qty}</strong></td>
+            <td>${i.isElectronic ? '🔋 Appareil électronique (Sans péremption)' : i.expiry}</td>
             <td><button class="btn btn-small" style="background:#800;" onclick="deleteItem(${idx})">X</button></td>
         </tr>`).join('');
     }
 
     function addItemToCurrentLot() {
         const nameInput = document.getElementById('item-name');
+        const qtyInput = document.getElementById('item-qty');
         const expiryInput = document.getElementById('item-expiry');
+        const elecInput = document.getElementById('item-is-electronic');
+        
         const name = nameInput.value.trim();
+        const qty = parseInt(qtyInput.value);
+        const isElectronic = elecInput.checked;
         const expiry = expiryInput.value;
 
-        if (!name || !expiry) {
-            alert("Veuillez remplir le nom et la date de péremption.");
+        if (!name || isNaN(qty) || qty <= 0 || (!isElectronic && !expiry)) {
+            alert("Veuillez remplir correctement le nom, la quantité et soit une date de péremption, soit cocher l'appareil électronique.");
             return;
         }
 
         const c = data.find(x => x.id === currentContainerId);
         if (c) {
             if (!c.items) c.items = [];
-            c.items.push({ name, expiry });
+            c.items.push({ name, qty, expiry: isElectronic ? null : expiry, isElectronic });
+            
+            // Reset formulaire
             nameInput.value = '';
+            qtyInput.value = '1';
             expiryInput.value = '';
+            elecInput.checked = false;
+            toggleExpiryField();
+
             saveToStorage();
             renderItems();
         }
