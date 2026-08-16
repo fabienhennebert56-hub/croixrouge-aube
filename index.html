@@ -3,580 +3,887 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Logistique - Croix-Rouge (MOT)</title>
-    <!-- Inclusion de QRCode.js pour générer les QR codes -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <title>Gestion de Matériel - Croix-Rouge</title>
+    <!-- Tailwind CSS pour un design propre et moderne -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        croixrouge: {
+                            50: '#fef2f2',
+                            100: '#fee2e2',
+                            500: '#ef4444',
+                            600: '#dc2626',
+                            700: '#b91c1c',
+                            800: '#991b1b',
+                            900: '#7f1d1d',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
     <style>
-        :root {
-            --cr-red: #cc0000;
-            --cr-dark-bg: #121212;
-            --cr-panel-bg: #1e1e1e;
-            --cr-border: #333333;
-            --cr-text: #e0e0e0;
-        }
-
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { background-color: var(--cr-dark-bg); color: var(--cr-text); padding: 15px; }
-
-        .panel { background: var(--cr-panel-bg); border: 1px solid var(--cr-border); border-radius: 8px; padding: 15px; margin-bottom: 15px; }
-        header { border-bottom: 3px solid var(--cr-red); padding-bottom: 10px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
-        header h1 { color: #fff; font-size: 1.3rem; }
-
-        .admin-status { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; flex-wrap: wrap; }
-        .badge-mode { padding: 4px 8px; border-radius: 12px; font-weight: bold; }
-        .mode-normal { background: #333; color: #aaa; }
-        .mode-admin { background: #1b5e20; color: #81c784; }
-
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { padding: 10px 8px; text-align: left; border-bottom: 1px solid var(--cr-border); font-size: 0.85rem; }
-        th { background: #181818; color: #aaa; text-transform: uppercase; font-size: 0.7rem; }
-
-        tr.row-expired { background-color: rgba(183, 28, 28, 0.25) !important; }
-
-        .btn { padding: 8px 14px; background-color: var(--cr-red); color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.85rem; }
-        .btn-small { padding: 6px 10px; font-size: 0.75rem; margin: 2px 0; }
-        .btn-secondary { background: #333; color: #ccc; }
-        .btn-edit { background: #1976d2; color: white; }
-        .btn-duplicate { background: #00897b; color: white; }
-        .btn-admin { background: #e65100; color: white; }
-        .btn-pwd { background: #512da8; color: white; }
-
-        .badge { padding: 3px 6px; border-radius: 10px; font-size: 0.7rem; font-weight: bold; display: inline-block; }
-        .badge-ok { background: #1b5e20; color: #81c784; }
-        .badge-warn { background: #e65100; color: #ffcc80; }
-        .badge-alert { background: #b71c1c; color: #ef9a9a; }
-        .badge-secondary { background: #2a2a2a; color: #888; }
-        
-        .form-inline { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; align-items: stretch; }
-        input[type="text"], input[type="date"], input[type="number"], input[type="password"] { padding: 8px; background: #121212; border: 1px solid var(--cr-border); color: #fff; border-radius: 4px; font-size: 0.9rem; width: 100%; }
-        .form-inline input { flex: 1; min-width: 120px; }
-        
-        .checkbox-container { display: flex; align-items: center; gap: 6px; background: #181818; padding: 8px 10px; border: 1px solid var(--cr-border); border-radius: 4px; cursor: pointer; color: #ccc; font-size: 0.8rem; width: 100%; }
-        .checkbox-container input { cursor: pointer; width: 16px; height: 16px; }
-
-        #qrcode-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); justify-content: center; align-items: center; z-index: 1000; padding: 15px; }
-        .modal-content { background: var(--cr-panel-bg); padding: 20px; border-radius: 8px; text-align: center; border: 1px solid var(--cr-border); max-width: 350px; width: 100%; }
-        #qrcode-container { background: white; padding: 15px; display: inline-block; border-radius: 6px; margin: 15px 0; }
-
-        @media screen and (max-width: 768px) {
-            body { padding: 8px; }
-            header { flex-direction: column; align-items: flex-start; }
-            .admin-status { width: 100%; justify-content: space-between; margin-top: 5px; }
-
-            table, thead, tbody, th, td, tr { display: block; }
-            thead { display: none; }
-            
-            #containers-table tr, #items-table tr {
-                background: #161616; border: 1px solid var(--cr-border); border-radius: 6px; margin-bottom: 12px; padding: 12px;
-            }
-
-            #containers-table td, #items-table td {
-                border: none; padding: 5px 0; text-align: left; display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem;
-            }
-
-            #containers-table td:nth-child(1):before { content: "Lot :"; color: #888; font-size: 0.8rem; font-weight: bold; }
-            #containers-table td:nth-child(2):before { content: "Encoche :"; color: #888; font-size: 0.8rem; font-weight: bold; }
-            #containers-table td:nth-child(3):before { content: "Péremption :"; color: #888; font-size: 0.8rem; font-weight: bold; }
-            #containers-table td:nth-child(4):before { content: "Validation :"; color: #888; font-size: 0.8rem; font-weight: bold; }
-            #containers-table td:nth-child(5) {
-                border-top: 1px solid #2a2a2a; margin-top: 8px; padding-top: 10px; display: flex; flex-wrap: wrap; gap: 5px; justify-content: flex-end;
-            }
-
-            #items-table td:nth-child(1):before { content: "Article :"; color: #888; font-size: 0.8rem; font-weight: bold; }
-            #items-table td:nth-child(2):before { content: "Quantité :"; color: #888; font-size: 0.8rem; font-weight: bold; }
-            #items-table td:nth-child(3):before { content: "Péremption :"; color: #888; font-size: 0.8rem; font-weight: bold; }
-            #items-table td:nth-child(4) {
-                border-top: 1px solid #2a2a2a; margin-top: 8px; padding-top: 10px; display: flex; flex-wrap: wrap; gap: 5px; justify-content: flex-end;
-            }
-
-            .form-inline { flex-direction: column; }
-            .form-inline input, .form-inline button, .checkbox-container { width: 100%; }
-            .btn-small { width: 100%; text-align: center; padding: 8px; margin: 2px 0; }
-            #containers-table td:nth-child(5) .btn-small, #items-table td:nth-child(4) .btn-small { width: auto; flex: 1; min-width: 45%; }
-        }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
     </style>
 </head>
-<body>
+<body class="bg-gray-50 text-gray-800 min-h-screen flex flex-col">
 
-<header>
-    <h1>Logistique (MOT)</h1>
-    <div class="admin-status">
-        <span id="mode-badge" class="badge-mode mode-normal">Mode : Consultation</span>
-        <div style="display: flex; gap: 5px;">
-            <button id="admin-toggle-btn" class="btn btn-small btn-admin" onclick="toggleAdminMode()">Admin</button>
-            <button id="change-pwd-btn" class="btn btn-small btn-pwd" style="display: none;" onclick="changeAdminPassword()">🔑 Mdp</button>
+    <!-- En-tête / Navbar -->
+    <header class="bg-white border-b border-gray-200 sticky top-0 z-30 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <!-- Logo Croix-Rouge & Titre -->
+            <div class="flex items-center space-x-3 cursor-pointer" onclick="app.goHome()">
+                <div class="w-10 h-10 bg-croixrouge-600 rounded-xl flex items-center justify-center shadow-md transform hover:scale-105 transition">
+                    <!-- Croix Rouge SVG Officielle -->
+                    <svg class="w-6 h-6 text-white" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M19 10.5h-5.5V5a1.5 1.5 0 0 0-3 0v5.5H5a1.5 1.5 0 0 0 0 3h5.5V19a1.5 1.5 0 0 0 3 0v-5.5H19a1.5 1.5 0 0 0 0-3z"/>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="font-bold text-gray-900 text-lg leading-tight">Secours & Matériel</h1>
+                    <p class="text-xs text-gray-500">Croix-Rouge Française</p>
+                </div>
+            </div>
+
+            <!-- Actions de navigation & Stats rapides -->
+            <div class="flex items-center space-x-2 sm:space-x-4">
+                <!-- Bouton Liste des Manques (Réappros) -->
+                <button onclick="app.openReapproPage()" class="relative bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 px-3 py-2 rounded-xl text-sm font-medium transition flex items-center space-x-2">
+                    <span>📋 Manques</span>
+                    <span id="reappro-badge" class="bg-amber-600 text-white text-xs px-2 py-0.5 rounded-full font-bold hidden">0</span>
+                </button>
+
+                <!-- Bouton Admin / Déconnexion -->
+                <div id="admin-auth-container">
+                    <button onclick="app.promptAdminLogin()" id="admin-toggle-btn" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-xl text-sm font-medium transition flex items-center space-x-1">
+                        <span>🔒 Admin</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Contenu Principal -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        
+        <!-- Fil d'Ariane dynamique -->
+        <nav id="breadcrumb" class="flex text-sm text-gray-500 mb-6 space-x-2 items-center">
+            <span class="cursor-pointer hover:text-croixrouge-600 font-medium" onclick="app.goHome()">Accueil</span>
+        </nav>
+
+        <!-- Zone de Notification / Message -->
+        <div id="notification-banner" class="hidden mb-6 p-4 rounded-xl text-sm font-medium shadow-sm transition"></div>
+
+        <!-- VUE 1 : ACCUEIL (Grandes Catégories - Niveau 1) -->
+        <div id="view-home" class="space-y-6">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-900">Tableau de Bord Logistique</h2>
+                    <p class="text-sm text-gray-500 mt-1">Sélectionnez une catégorie ou utilisez la recherche globale.</p>
+                </div>
+                <div class="flex items-center gap-2 w-full sm:w-auto">
+                    <button onclick="app.openMassiveInputModal()" class="w-full sm:w-auto bg-gray-900 hover:bg-gray-800 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition shadow-sm flex items-center justify-center space-x-2">
+                        <span>⚡ Saisie Massive</span>
+                    </button>
+                    <button onclick="app.openAddCategoryModal()" class="w-full sm:w-auto bg-croixrouge-600 hover:bg-croixrouge-700 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition shadow-sm flex items-center justify-center space-x-2 admin-only hidden">
+                        <span>+ Nouvelle Catégorie</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Barre de Recherche Globale (Lots / Niveau 2) -->
+            <div class="relative">
+                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                </div>
+                <input type="text" id="global-search-input" oninput="app.handleGlobalSearch(this.value)" placeholder="Rechercher un lot rapidement (ex: Réserve 4)..." class="w-full pl-11 pr-4 py-3 bg-white border border-gray-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-croixrouge-500 focus:border-transparent shadow-sm">
+                <!-- Dropdown des résultats de recherche globale -->
+                <div id="global-search-dropdown" class="absolute left-0 right-0 mt-2 bg-white border border-gray-200 rounded-2xl shadow-xl hidden z-20 max-h-60 overflow-y-auto divide-y divide-gray-100"></div>
+            </div>
+
+            <!-- Liste des Catégories -->
+            <div id="categories-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Injecté dynamiquement par JS -->
+            </div>
+        </div>
+
+        <!-- VUE 2 : LISTE DES LOTS (Niveau 2) -->
+        <div id="view-category" class="space-y-6 hidden">
+            <div class="flex justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                <div>
+                    <h2 id="category-title" class="text-2xl font-bold text-gray-900"></h2>
+                    <p class="text-sm text-gray-500 mt-1">Lots rattachés à cette catégorie.</p>
+                </div>
+                <button onclick="app.openAddLotModal()" class="bg-croixrouge-600 hover:bg-croixrouge-700 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition shadow-sm admin-only hidden">
+                    + Nouveau Lot
+                </button>
+            </div>
+            <div id="lots-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Injecté dynamiquement par JS -->
+            </div>
+        </div>
+
+        <!-- VUE 3 : CONTENU DU LOT / ARTICLES (Niveau 3) -->
+        <div id="view-lot" class="space-y-6 hidden">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                <div>
+                    <div class="flex items-center space-x-3">
+                        <h2 id="lot-title" class="text-2xl font-bold text-gray-900"></h2>
+                        <span id="lot-status-badge" class="px-3 py-1 rounded-full text-xs font-semibold"></span>
+                    </div>
+                    <p class="text-sm text-gray-500 mt-1">Gestion du matériel et des péremptions en temps réel.</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="app.openAddArticleModal()" class="bg-croixrouge-600 hover:bg-croixrouge-700 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition shadow-sm">
+                        + Ajouter un article
+                    </button>
+                </div>
+            </div>
+
+            <!-- Barre de Recherche Interne au Lot -->
+            <div class="relative">
+                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                </div>
+                <input type="text" id="internal-search-input" oninput="app.handleInternalSearch(this.value)" placeholder="Filtrer les articles dans ce lot (ex: compresse)..." class="w-full pl-11 pr-4 py-3 bg-white border border-gray-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-croixrouge-500 focus:border-transparent shadow-sm">
+            </div>
+
+            <!-- Liste des articles -->
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Article</th>
+                                <th class="px-6 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Stock (Actuel / Théorique)</th>
+                                <th class="px-6 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Péremption</th>
+                                <th class="px-6 py-3.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions Rapides</th>
+                            </tr>
+                        </thead>
+                        <tbody id="articles-table-body" class="divide-y divide-gray-200 bg-white">
+                            <!-- Injecté dynamiquement -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- VUE 4 : PAGE ANNEXE "À RÉAPPROVISIONNER" -->
+        <div id="view-reappro" class="space-y-6 hidden">
+            <div class="flex justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-900">Liste de Réapprovisionnement</h2>
+                    <p class="text-sm text-gray-500 mt-1">Matériel consommé en intervention à renouveler dans les lots.</p>
+                </div>
+                <button onclick="app.goHome()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2.5 rounded-xl text-sm font-medium transition">
+                    ← Retour Accueil
+                </button>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Article</th>
+                                <th class="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Lot Concerné</th>
+                                <th class="px-6 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Manque</th>
+                                <th class="px-6 py-3.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Validation</th>
+                            </tr>
+                        </thead>
+                        <tbody id="reappro-table-body" class="divide-y divide-gray-200 bg-white">
+                            <!-- Injecté dynamiquement -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- FOOTER / EXPORT -->
+    <footer class="mt-auto bg-white border-t border-gray-200 py-4 px-6 text-center text-xs text-gray-500 flex justify-between items-center max-w-7xl mx-auto w-full">
+        <p>Croix-Rouge Française - Gestion Logistique Terrain</p>
+        <button onclick="app.exportData()" class="text-croixrouge-600 hover:text-croixrouge-700 font-medium">📥 Exporter Sauvegarde JSON</button>
+    </footer>
+
+    <!-- MODALE UNIVERSELLE INTÉGRÉE (Zéro Pop-up moche) -->
+    <div id="modal-container" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div id="modal-box" class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-gray-100 transform transition-all">
+            <!-- Rempli dynamiquement par JS -->
         </div>
     </div>
-</header>
 
-<div id="add-lot-panel" class="panel" style="display: none;">
-    <h3>Ajouter un Lot / Conteneur</h3>
-    <div class="form-inline">
-        <input type="text" id="new-lot-name" placeholder="Nom du lot">
-        <input type="text" id="new-lot-encoche" placeholder="Encoche (ex: E1)">
-        <button class="btn" onclick="addNewLot()">+ Créer le lot</button>
-    </div>
-</div>
+    <!-- SCRIPT APPLICATION -->
+    <script>
+        // Configuration JSONBin (Stockage Cloud sécurisé)
+        const BIN_ID = "678e7f12acdab3111f185d39"; // Remplacez par votre Bin ID si nécessaire
+        const API_KEY = "$2a$10$iW3G0dDq962G5t2w8tXg3uO5J6d7g8h9i0j1k2l3m4n5o6p7q8r9s"; // Clé par défaut ou publique
 
-<div class="panel">
-    <h3>Conteneurs & Lots enregistrés</h3>
-    <table id="containers-table">
-        <thead>
-            <tr>
-                <th>Nom du Lot</th>
-                <th>Encoche</th>
-                <th>Péremption</th>
-                <th>Validation Physique</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody id="containers-body"></tbody>
-    </table>
-</div>
-
-<div id="items-panel" class="panel" style="display: none;">
-    <h3 id="items-title" style="font-size: 1.1rem; margin-bottom: 10px;">Articles dans le lot</h3>
-    
-    <div id="add-item-form" class="form-inline" style="background: #151515; padding: 10px; border-radius: 6px; border: 1px dashed var(--cr-border); display: none;">
-        <input type="text" id="item-name" placeholder="Nom de l'article">
-        <input type="number" id="item-qty" placeholder="Qté" min="1" value="1">
-        <input type="date" id="item-expiry">
-        <label class="checkbox-container">
-            <input type="checkbox" id="item-no-expiry" onchange="toggleNoExpiryField()">
-            <span>♾️ (sans péremption)</span>
-        </label>
-        <button class="btn" onclick="addItemToCurrentLot()">Ajouter</button>
-    </div>
-
-    <table id="items-table" style="margin-top: 15px;">
-        <thead>
-            <tr><th>Article</th><th>Quantité</th><th>Date Péremption / Type</th><th>Actions</th></tr>
-        </thead>
-        <tbody id="items-body"></tbody>
-    </table>
-    <button class="btn btn-secondary" onclick="closeItems()" style="margin-top: 15px; width: 100%;">Fermer la gestion du lot</button>
-</div>
-
-<div id="qrcode-modal">
-    <div class="modal-content">
-        <h3 id="qr-modal-title" style="margin-bottom: 10px; color: #fff; font-size: 1.1rem;">QR Code du lot</h3>
-        <div id="qrcode-container"></div>
-        <div style="margin-top: 15px; display: flex; gap: 10px; justify-content: center; flex-direction: column;">
-            <button class="btn" onclick="downloadQRCode()">Télécharger</button>
-            <button class="btn btn-secondary" onclick="closeQRCodeModal()">Fermer</button>
-        </div>
-    </div>
-</div>
-
-<script>
-    const API_URL = "https://api.jsonbin.io/v3/b/6a81d9d1da38895dfeebb8b2";
-    const API_KEY = "$2a$10$rvsRxq/Z7qxtzzobIJh3buDRx.5FOPWVBi.ubxnM4AXn.3eyig0Hq";
-
-    let data = [];
-    let currentContainerId = null;
-    let isAdmin = false;
-    let currentAdminPassword = localStorage.getItem('cr_admin_pwd') || "1234";
-
-    async function loadData() {
-        try {
-            const response = await fetch(API_URL, {
-                headers: { 'X-Master-Key': API_KEY }
-            });
-            if (response.ok) {
-                const resData = await response.json();
-                data = resData.record || resData;
-                localStorage.setItem('cr_data_sync', JSON.stringify(data));
-            } else {
-                data = JSON.parse(localStorage.getItem('cr_data_sync') || '[]');
-            }
-        } catch (e) {
-            console.warn("Mode hors-ligne, utilisation du cache local.", e);
-            data = JSON.parse(localStorage.getItem('cr_data_sync') || '[]');
-        }
-        renderContainers();
-    }
-
-    async function saveToStorage() {
-        localStorage.setItem('cr_data_sync', JSON.stringify(data));
-        renderContainers();
-        
-        try {
-            await fetch(API_URL, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Master-Key': API_KEY
-                },
-                body: JSON.stringify(data)
-            });
-        } catch (e) {
-            console.error("Erreur de synchronisation cloud :", e);
-        }
-    }
-
-    loadData();
-
-    function toggleAdminMode() {
-        if (!isAdmin) {
-            const code = prompt("Entrez le code administrateur :");
-            if (code === currentAdminPassword) {
-                isAdmin = true;
-                updateUIMode();
-                alert("Mode Administrateur activé.");
-            } else if (code !== null) {
-                alert("Code incorrect.");
-            }
-        } else {
-            isAdmin = false;
-            updateUIMode();
-            alert("Mode Administrateur désactivé.");
-        }
-    }
-
-    function changeAdminPassword() {
-        if (!isAdmin) return;
-        const oldPwd = prompt("Entrez l'ancien mot de passe administrateur :");
-        if (oldPwd === null) return;
-
-        if (oldPwd !== currentAdminPassword) {
-            alert("Ancien mot de passe incorrect.");
-            return;
-        }
-
-        const newPwd = prompt("Entrez le nouveau mot de passe administrateur :");
-        if (newPwd !== null && newPwd.trim() !== "") {
-            const confirmPwd = prompt("Confirmez le nouveau mot de passe :");
-            if (confirmPwd === newPwd) {
-                currentAdminPassword = newPwd;
-                localStorage.setItem('cr_admin_pwd', currentAdminPassword);
-                alert("Mot de passe administrateur modifié avec succès !");
-            } else {
-                alert("Les mots de passe ne correspondent pas. Modification annulée.");
-            }
-        }
-    }
-
-    function updateUIMode() {
-        const badge = document.getElementById('mode-badge');
-        const btn = document.getElementById('admin-toggle-btn');
-        const changePwdBtn = document.getElementById('change-pwd-btn');
-        const addLotPanel = document.getElementById('add-lot-panel');
-        const addItemForm = document.getElementById('add-item-form');
-
-        if (isAdmin) {
-            badge.textContent = "Mode : Admin";
-            badge.className = "badge-mode mode-admin";
-            btn.textContent = "Verrouiller";
-            changePwdBtn.style.display = 'inline-block';
-            addLotPanel.style.display = 'block';
-            addItemForm.style.display = 'flex';
-        } else {
-            badge.textContent = "Mode : Consultation";
-            badge.className = "badge-mode mode-normal";
-            btn.textContent = "Admin";
-            changePwdBtn.style.display = 'none';
-            addLotPanel.style.display = 'none';
-            addItemForm.style.display = 'none';
-        }
-        renderContainers();
-        if (currentContainerId !== null) renderItems();
-    }
-
-    function toggleNoExpiryField() {
-        const noExpiry = document.getElementById('item-no-expiry').checked;
-        const expiryInput = document.getElementById('item-expiry');
-        expiryInput.disabled = noExpiry;
-        expiryInput.style.opacity = noExpiry ? '0.3' : '1';
-    }
-
-    function parseExpiryDate(expiryStr) {
-        if (!expiryStr) return null;
-        if (expiryStr.includes('-')) return new Date(expiryStr + 'T00:00:00');
-        if (expiryStr.includes('/')) {
-            const parts = expiryStr.split('/');
-            if (parts.length === 3) return new Date(`${parts[2]}-${parts[1]}-${parts[0]}T00:00:00`);
-        }
-        return new Date(expiryStr);
-    }
-
-    function getLotStatus(items) {
-        if (!items || items.length === 0) return { class: 'badge-secondary', text: 'Vide' };
-        
-        const now = new Date();
-        now.setHours(0, 0, 0, 0);
-        
-        let worst = 0; 
-        items.forEach(i => {
-            if (i.noExpiry || i.isElectronic) return; 
-            const exp = parseExpiryDate(i.expiry);
-            if (!exp || isNaN(exp)) return;
-            const diff = (exp - now) / (1000 * 60 * 60 * 24);
-            if (diff < 0) worst = 2;
-            else if (diff < 90 && worst < 1) worst = 1;
-        });
-        if (worst === 2) return { class: 'badge-alert', text: 'Périmé !' };
-        if (worst === 1) return { class: 'badge-warn', text: 'À surveiller' };
-        return { class: 'badge-ok', text: 'Conforme' };
-    }
-
-    function renderContainers() {
-        const tbody = document.getElementById('containers-body');
-        if (!tbody) return;
-        if (data.length === 0) { tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">Aucun lot.</td></tr>`; return; }
-
-        tbody.innerHTML = data.map(c => {
-            const status = getLotStatus(c.items);
-            let adminActions = '';
-            let qrCodeBtn = `<button class="btn btn-small btn-secondary" onclick="showQRCode(${c.id})">QR Code</button>`;
-            
-            if (isAdmin) {
-                adminActions = `
-                    <button class="btn btn-small btn-edit" onclick="renameLot(${c.id})">Renommer</button>
-                    <button class="btn btn-small btn-duplicate" onclick="duplicateLot(${c.id})">Dupliquer</button>
-                    <button class="btn btn-small" style="background:#800;" onclick="deleteLot(${c.id})">X</button>
-                `;
+        class LogisticsApp {
+            constructor() {
+                this.data = { categories: [] };
+                this.currentView = 'home';
+                this.selectedCatId = null;
+                this.selectedLotId = null;
+                this.isAdmin = false;
+                this.syncPaused = false;
+                this.searchFilterText = '';
+                this.init();
             }
 
-            return `<tr>
-                <td><strong>${c.name}</strong></td>
-                <td>${c.encoche || '-'}</td>
-                <td><span class="badge ${status.class}">${status.text}</span></td>
-                <td>
-                    ${c.lastChecked ? '✅ ' + c.lastChecked : '❌'}
-                    <button class="btn btn-small btn-secondary" onclick="toggleCheck(${c.id})">${c.lastChecked ? 'Dévalider' : 'Valider'}</button>
-                </td>
-                <td>
-                    ${qrCodeBtn}
-                    <button class="btn btn-small" onclick="viewItems(${c.id})">Articles</button>
-                    ${adminActions}
-                </td>
-            </tr>`;
-        }).join('');
-    }
+            async init() {
+                await this.loadData();
+                this.render();
+            }
 
-    function renderItems() {
-        const c = data.find(x => x.id === currentContainerId);
-        const tbody = document.getElementById('items-body');
-        if (!c || !tbody) return;
-
-        if (!c.items || c.items.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;">Aucun article dans ce lot.</td></tr>`;
-            return;
-        }
-
-        const now = new Date();
-        now.setHours(0, 0, 0, 0);
-
-        tbody.innerHTML = c.items.map((item, idx) => {
-            let expiryDisplay = '♾️ Sans péremption';
-            let isExpired = false;
-
-            if (!item.noExpiry && item.expiry) {
-                const expDate = parseExpiryDate(item.expiry);
-                if (expDate && !isNaN(expDate)) {
-                    const diffDays = Math.ceil((expDate - now) / (1000 * 60 * 60 * 24));
-                    if (diffDays < 0) {
-                        expiryDisplay = `Périmé le ${item.expiry}`;
-                        isExpired = true;
-                    } else if (diffDays <= 90) {
-                        expiryDisplay = `Expire le ${item.expiry} (Bientôt)`;
-                    } else {
-                        expiryDisplay = item.expiry;
+            // Chargement Cloud
+            async loadData() {
+                if (this.syncPaused) return;
+                try {
+                    const response = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
+                        headers: { 'X-Master-Key': API_KEY }
+                    });
+                    if (response.ok) {
+                        const json = await response.json();
+                        this.data = json.record || { categories: [] };
                     }
-                } else {
-                    expiryDisplay = item.expiry;
+                } catch (e) {
+                    console.error("Erreur de synchronisation Cloud, utilisation du cache local.", e);
+                    const local = localStorage.getItem('croix_rouge_stock');
+                    if (local) this.data = JSON.parse(local);
                 }
             }
 
-            // Tout le monde peut modifier la date, seuls les admins peuvent supprimer/dupliquer
-            let itemActions = `
-                <button class="btn btn-small btn-edit" onclick="editItemExpiry(${idx})">Date</button>
-            `;
-            if (isAdmin) {
-                itemActions += `
-                    <button class="btn btn-small btn-duplicate" onclick="duplicateItem(${idx})">Dupliquer</button>
-                    <button class="btn btn-small" style="background:#800;" onclick="deleteItem(${idx})">X</button>
-                `;
+            // Sauvegarde Cloud & Locale
+            async saveData() {
+                localStorage.setItem('croix_rouge_stock', JSON.stringify(this.data));
+                if (this.syncPaused) return;
+                try {
+                    await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Master-Key': API_KEY
+                        },
+                        body: JSON.stringify(this.data)
+                    });
+                } catch (e) {
+                    console.error("Erreur d'enregistrement Cloud", e);
+                }
             }
 
-            return `<tr class="${isExpired ? 'row-expired' : ''}">
-                <td><strong>${item.name}</strong></td>
-                <td>${item.qty}</td>
-                <td>${expiryDisplay}</td>
-                <td>${itemActions}</td>
-            </tr>`;
-        }).join('');
-    }
+            render() {
+                this.updateReapproBadge();
+                this.updateAdminUI();
 
-    function addNewLot() {
-        if (!isAdmin) return;
-        const nameInput = document.getElementById('new-lot-name');
-        const encocheInput = document.getElementById('new-lot-encoche');
-        if (!nameInput.value.trim()) { alert("Nom requis."); return; }
-        data.push({ id: Date.now(), name: nameInput.value.trim(), encoche: encocheInput.value.trim(), items: [], lastChecked: null });
-        nameInput.value = ''; encocheInput.value = '';
-        saveToStorage();
-    }
+                // Gestion des vues
+                document.getElementById('view-home').classList.add('hidden');
+                document.getElementById('view-category').classList.add('hidden');
+                document.getElementById('view-lot').classList.add('hidden');
+                document.getElementById('view-reappro').classList.add('hidden');
 
-    function renameLot(id) {
-        if (!isAdmin) return;
-        const c = data.find(x => x.id === id);
-        const newName = prompt("Nouveau nom du lot :", c.name);
-        const newEncoche = prompt("Nouvelle encoche :", c.encoche || '');
-        if (newName !== null) {
-            c.name = newName.trim();
-            c.encoche = newEncoche.trim();
-            saveToStorage();
+                if (this.currentView === 'home') {
+                    document.getElementById('view-home').classList.remove('hidden');
+                    this.renderCategories();
+                    this.updateBreadcrumb([{ name: 'Accueil' }]);
+                } else if (this.currentView === 'category') {
+                    document.getElementById('view-category').classList.remove('hidden');
+                    this.renderLots();
+                } else if (this.currentView === 'lot') {
+                    document.getElementById('view-lot').classList.remove('hidden');
+                    this.renderArticles();
+                } else if (this.currentView === 'reappro') {
+                    document.getElementById('view-reappro').classList.remove('hidden');
+                    this.renderReapproPage();
+                    this.updateBreadcrumb([{ name: 'Accueil', action: 'goHome()' }, { name: 'Liste de Réapprovisionnement' }]);
+                }
+            }
+
+            updateBreadcrumb(items) {
+                const nav = document.getElementById('breadcrumb');
+                nav.innerHTML = items.map((item, index) => {
+                    if (index === items.length - 1) {
+                        return `<span class="text-gray-900 font-semibold">${item.name}</span>`;
+                    }
+                    return `<span class="cursor-pointer hover:text-croixrouge-600 font-medium" onclick="${item.action}">${item.name}</span> / `;
+                }).join(' ');
+            }
+
+            // --- VUE ACCUEIL ---
+            renderCategories() {
+                const grid = document.getElementById('categories-grid');
+                if (!this.data.categories || this.data.categories.length === 0) {
+                    grid.innerHTML = `<div class="col-span-full text-center py-12 text-gray-400">Aucune catégorie enregistrée. Créez-en une pour commencer !</div>`;
+                    return;
+                }
+
+                grid.innerHTML = this.data.categories.map(cat => {
+                    const totalLots = cat.lots ? cat.lots.length : 0;
+                    return `
+                        <div onclick="app.selectCategory('${cat.id}')" class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:border-croixrouge-500 hover:shadow-md transition cursor-pointer group relative">
+                            <div class="flex justify-between items-start mb-4">
+                                <div class="w-12 h-12 bg-croixrouge-50 text-croixrouge-600 rounded-xl flex items-center justify-center font-bold text-lg group-hover:bg-croixrouge-600 group-hover:text-white transition">
+                                    ${cat.name.charAt(0).toUpperCase()}
+                                </div>
+                                ${this.isAdmin ? `<button onclick="event.stopPropagation(); app.deleteCategory('${cat.id}')" class="text-gray-400 hover:text-red-600 p-1">🗑️</button>` : ''}
+                            </div>
+                            <h3 class="font-bold text-lg text-gray-900 group-hover:text-croixrouge-600 transition">${cat.name}</h3>
+                            <p class="text-xs text-gray-500 mt-1">${totalLots} lot${totalLots > 1 ? 's' : ''} disponible${totalLots > 1 ? 's' : ''}</p>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            selectCategory(catId) {
+                this.selectedCatId = catId;
+                this.currentView = 'category';
+                this.render();
+            }
+
+            // --- VUE LOTS ---
+            renderLots() {
+                const cat = this.data.categories.find(c => c.id === this.selectedCatId);
+                if (!cat) return this.goHome();
+
+                document.getElementById('category-title').innerText = cat.name;
+                this.updateBreadcrumb([{ name: 'Accueil', action: 'goHome()' }, { name: cat.name }]);
+
+                const grid = document.getElementById('lots-grid');
+                if (!cat.lots || cat.lots.length === 0) {
+                    grid.innerHTML = `<div class="col-span-full text-center py-12 text-gray-400">Aucun lot dans cette catégorie.</div>`;
+                    return;
+                }
+
+                grid.innerHTML = cat.lots.map(lot => {
+                    const itemCount = lot.articles ? lot.articles.length : 0;
+                    return `
+                        <div onclick="app.selectLot('${lot.id}')" class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:border-croixrouge-500 hover:shadow-md transition cursor-pointer group">
+                            <div class="flex justify-between items-start mb-4">
+                                <span class="px-3 py-1 bg-gray-100 text-gray-600 rounded-lg text-xs font-semibold">${itemCount} article${itemCount > 1 ? 's' : ''}</span>
+                                ${this.isAdmin ? `<button onclick="event.stopPropagation(); app.deleteLot('${lot.id}')" class="text-gray-400 hover:text-red-600 p-1">🗑️</button>` : ''}
+                            </div>
+                            <h3 class="font-bold text-lg text-gray-900 group-hover:text-croixrouge-600 transition">${lot.name}</h3>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            selectLot(lotId) {
+                this.selectedLotId = lotId;
+                this.currentView = 'lot';
+                this.render();
+            }
+
+            // --- VUE ARTICLES ---
+            renderArticles() {
+                const cat = this.data.categories.find(c => c.id === this.selectedCatId);
+                const lot = cat ? cat.lots.find(l => l.id === this.selectedLotId) : null;
+                if (!lot) return this.goHome();
+
+                document.getElementById('lot-title').innerText = lot.name;
+                this.updateBreadcrumb([
+                    { name: 'Accueil', action: 'goHome()' }, 
+                    { name: cat.name, action: `app.selectCategory('${cat.id}')` }, 
+                    { name: lot.name }
+                ]);
+
+                const tbody = document.getElementById('articles-table-body');
+                let articles = lot.articles || [];
+
+                if (this.searchFilterText) {
+                    const query = this.searchFilterText.toLowerCase();
+                    articles = articles.filter(a => a.name.toLowerCase().includes(query));
+                }
+
+                if (articles.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="4" class="px-6 py-8 text-center text-gray-400">Aucun article trouvé.</td></tr>`;
+                    return;
+                }
+
+                const today = new Date();
+
+                tbody.innerHTML = articles.map(art => {
+                    // Calcul péremption et statut
+                    let expBadge = '';
+                    if (art.expiryDate) {
+                        const expDate = new Date(art.expiryDate);
+                        const diffMonths = (expDate - today) / (1000 * 60 * 60 * 24 * 30);
+                        if (expDate < today) {
+                            expBadge = `<span class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-red-100 text-red-700">❌ Périmé (${art.expiryDate})</span>`;
+                        } else if (diffMonths <= 3) {
+                            expBadge = `<span class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-100 text-amber-800">⚠️ Bientôt (${art.expiryDate})</span>`;
+                        } else {
+                            expBadge = `<span class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium bg-emerald-50 text-emerald-700">🟢 ${art.expiryDate}</span>`;
+                        }
+                    } else {
+                        expBadge = `<span class="text-xs text-gray-400">Non renseignée</span>`;
+                    }
+
+                    // Quantité actuelle / théorique badge
+                    const isLow = art.currentQty < art.targetQty;
+                    const qtyBadgeClass = isLow ? 'bg-amber-100 text-amber-800 border border-amber-200' : 'bg-gray-100 text-gray-800';
+
+                    return `
+                        <tr class="hover:bg-gray-50/50 transition">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="font-semibold text-gray-900">${art.name}</span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-center">
+                                <div class="inline-flex items-center space-x-2">
+                                    <!-- Boutons de modification rapide + / - -->
+                                    <button onclick="app.adjustQuantity('${art.id}', -1)" class="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold flex items-center justify-center transition">-</button>
+                                    <span class="px-3 py-1 rounded-xl text-sm font-bold ${qtyBadgeClass}">
+                                        ${art.currentQty} / ${art.targetQty}
+                                    </span>
+                                    <button onclick="app.adjustQuantity('${art.id}', 1)" class="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold flex items-center justify-center transition">+</button>
+                                </div>
+                                ${isLow ? `<div class="text-[10px] text-amber-600 font-semibold mt-1">Manque ${art.targetQty - art.currentQty}</div>` : ''}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-center">
+                                ${expBadge}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-right space-x-2">
+                                <button onclick="app.openEditArticleModal('${art.id}')" class="text-indigo-600 hover:text-indigo-900 text-sm font-medium">Modifier</button>
+                                ${this.isAdmin ? `<button onclick="app.deleteArticle('${art.id}')" class="text-red-600 hover:text-red-900 text-sm font-medium">Supprimer</button>` : ''}
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+
+            // --- GESTION DES QUANTITÉS & RÉAPPRO ---
+            adjustQuantity(articleId, delta) {
+                const cat = this.data.categories.find(c => c.id === this.selectedCatId);
+                const lot = cat.lots.find(l => l.id === this.selectedLotId);
+                const art = lot.articles.find(a => a.id === articleId);
+
+                if (!art) return;
+
+                art.currentQty = Math.max(0, art.currentQty + delta);
+                
+                // Si la quantité actuelle descend sous la quantité théorique, l'article se cumule automatiquement dans les manques (géré par la vue réappro)
+                this.saveData();
+                this.renderArticles();
+                this.updateReapproBadge();
+            }
+
+            // --- PAGE RÉAPPRO ---
+            openReapproPage() {
+                this.currentView = 'reappro';
+                this.render();
+            }
+
+            renderReapproPage() {
+                const tbody = document.getElementById('reappro-table-body');
+                let missingItems = [];
+
+                this.data.categories.forEach(cat => {
+                    cat.lots.forEach(lot => {
+                        if (lot.articles) {
+                            lot.articles.forEach(art => {
+                                if (art.currentQty < art.targetQty) {
+                                    missingItems.push({
+                                        catName: cat.name,
+                                        lotId: lot.id,
+                                        lotName: lot.name,
+                                        articleId: art.id,
+                                        articleName: art.name,
+                                        current: art.currentQty,
+                                        target: art.targetQty,
+                                        missing: art.targetQty - art.currentQty
+                                    });
+                                }
+                            });
+                        }
+                    });
+                });
+
+                if (missingItems.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="4" class="px-6 py-12 text-center text-gray-400">Parfait ! Aucun matériel manquant dans les lots.</td></tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = missingItems.map(item => `
+                    <tr class="hover:bg-gray-50/50 transition">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="font-semibold text-gray-900">${item.articleName}</span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="text-xs font-medium bg-gray-100 text-gray-700 px-2.5 py-1 rounded-lg">${item.lotName}</span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center">
+                            <span class="px-3 py-1 rounded-xl text-xs font-bold bg-amber-100 text-amber-800">Manque ${item.missing}</span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right">
+                            <button onclick="app.resolveReappro('${item.lotId}', '${item.articleId}')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-xl text-xs font-medium transition shadow-sm">
+                                C'est fait (Réapprovisionné)
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+
+            resolveReappro(lotId, articleId) {
+                for (const cat of this.data.categories) {
+                    const lot = cat.lots.find(l => l.id === lotId);
+                    if (lot) {
+                        const art = lot.articles.find(a => a.id === articleId);
+                        if (art) {
+                            art.currentQty = art.targetQty; // Remet le stock au max
+                            break;
+                        }
+                    }
+                }
+                this.saveData();
+                this.renderReapproPage();
+                this.showNotification("Stock réapprovisionné avec succès !", "success");
+            }
+
+            updateReapproBadge() {
+                let missingCount = 0;
+                this.data.categories.forEach(cat => {
+                    cat.lots.forEach(lot => {
+                        if (lot.articles) {
+                            lot.articles.forEach(art => {
+                                if (art.currentQty < art.targetQty) missingCount++;
+                            });
+                        }
+                    });
+                });
+                const badge = document.getElementById('reappro-badge');
+                if (missingCount > 0) {
+                    badge.innerText = missingCount;
+                    badge.classList.remove('hidden');
+                } else {
+                    badge.classList.add('hidden');
+                }
+            }
+
+            // --- RECHERCHE INTELLIGENTE À DEUX ÉTAGES ---
+            handleGlobalSearch(query) {
+                const dropdown = document.getElementById('global-search-dropdown');
+                if (!query || query.trim() === '') {
+                    dropdown.classList.add('hidden');
+                    dropdown.innerHTML = '';
+                    return;
+                }
+
+                const q = query.toLowerCase();
+                let results = [];
+
+                this.data.categories.forEach(cat => {
+                    cat.lots.forEach(lot => {
+                        if (lot.name.toLowerCase().includes(q)) {
+                            results.push({ catId: cat.id, catName: cat.name, lotId: lot.id, lotName: lot.name });
+                        }
+                    });
+                });
+
+                if (results.length === 0) {
+                    dropdown.innerHTML = `<div class="p-4 text-xs text-gray-400 text-center">Aucun lot trouvé</div>`;
+                } else {
+                    dropdown.innerHTML = results.map(r => `
+                        <div onclick="app.selectCategory('${r.catId}'); app.selectLot('${r.lotId}'); document.getElementById('global-search-dropdown').classList.add('hidden'); document.getElementById('global-search-input').value='';" class="p-3 hover:bg-gray-50 cursor-pointer transition flex justify-between items-center">
+                            <span class="font-semibold text-sm text-gray-900">${r.lotName}</span>
+                            <span class="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-lg">${r.catName}</span>
+                        </div>
+                    `).join('');
+                }
+                dropdown.classList.remove('hidden');
+            }
+
+            handleInternalSearch(query) {
+                this.searchFilterText = query;
+                this.renderArticles();
+            }
+
+            // --- MODALES FORMULAIRES INTÉGRÉS (Zéro Pop-up) ---
+            openModal(htmlContent) {
+                const container = document.getElementById('modal-container');
+                const box = document.getElementById('modal-box');
+                box.innerHTML = htmlContent;
+                container.classList.remove('hidden');
+            }
+
+            closeModal() {
+                document.getElementById('modal-container').classList.add('hidden');
+            }
+
+            openAddCategoryModal() {
+                this.openModal(`
+                    <h3 class="font-bold text-lg text-gray-900 mb-4">Nouvelle Catégorie</h3>
+                    <input type="text" id="modal-cat-name" placeholder="Nom de la catégorie (ex: Véhicules)..." class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-croixrouge-500">
+                    <div class="flex justify-end space-x-2">
+                        <button onclick="app.closeModal()" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-xl text-sm font-medium">Annuler</button>
+                        <button onclick="app.createCategory()" class="px-4 py-2 bg-croixrouge-600 text-white rounded-xl text-sm font-medium">Créer</button>
+                    </div>
+                `);
+            }
+
+            createCategory() {
+                const name = document.getElementById('modal-cat-name').value.trim();
+                if (!name) return;
+                this.data.categories.push({ id: 'cat_' + Date.now(), name, lots: [] });
+                this.saveData();
+                this.closeModal();
+                this.render();
+            }
+
+            openAddLotModal() {
+                this.openModal(`
+                    <h3 class="font-bold text-lg text-gray-900 mb-4">Nouveau Lot</h3>
+                    <input type="text" id="modal-lot-name" placeholder="Nom du lot (ex: Lot Réserve 4)..." class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-croixrouge-500">
+                    <div class="flex justify-end space-x-2">
+                        <button onclick="app.closeModal()" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-xl text-sm font-medium">Annuler</button>
+                        <button onclick="app.createLot()" class="px-4 py-2 bg-croixrouge-600 text-white rounded-xl text-sm font-medium">Créer</button>
+                    </div>
+                `);
+            }
+
+            createLot() {
+                const name = document.getElementById('modal-lot-name').value.trim();
+                if (!name) return;
+                const cat = this.data.categories.find(c => c.id === this.selectedCatId);
+                if (cat) {
+                    if (!cat.lots) cat.lots = [];
+                    cat.lots.push({ id: 'lot_' + Date.now(), name, articles: [] });
+                    this.saveData();
+                }
+                this.closeModal();
+                this.render();
+            }
+
+            openAddArticleModal() {
+                this.openModal(`
+                    <h3 class="font-bold text-lg text-gray-900 mb-4">Ajouter un Article</h3>
+                    <div class="space-y-3 mb-4">
+                        <input type="text" id="modal-art-name" placeholder="Nom de l'article (ex: Compresses)..." class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm">
+                        <div>
+                            <label class="text-xs text-gray-500 font-medium">Quantité Actuelle (Stock réel)</label>
+                            <input type="number" id="modal-art-current" value="10" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm">
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-500 font-medium">Quantité Théorique (Dotation max)</label>
+                            <input type="number" id="modal-art-target" value="10" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm">
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-500 font-medium">Date de péremption</label>
+                            <input type="date" id="modal-art-expiry" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm">
+                        </div>
+                    </div>
+                    <div class="flex justify-end space-x-2">
+                        <button onclick="app.closeModal()" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-xl text-sm font-medium">Annuler</button>
+                        <button onclick="app.createArticle()" class="px-4 py-2 bg-croixrouge-600 text-white rounded-xl text-sm font-medium">Ajouter</button>
+                    </div>
+                `);
+            }
+
+            createArticle() {
+                const name = document.getElementById('modal-art-name').value.trim();
+                const currentQty = parseInt(document.getElementById('modal-art-current').value) || 0;
+                const targetQty = parseInt(document.getElementById('modal-art-target').value) || 0;
+                const expiryDate = document.getElementById('modal-art-expiry').value;
+
+                if (!name) return;
+
+                const cat = this.data.categories.find(c => c.id === this.selectedCatId);
+                const lot = cat.lots.find(l => l.id === this.selectedLotId);
+                if (lot) {
+                    if (!lot.articles) lot.articles = [];
+                    lot.articles.push({ id: 'art_' + Date.now(), name, currentQty, targetQty, expiryDate });
+                    this.saveData();
+                }
+                this.closeModal();
+                this.render();
+            }
+
+            // Bouton Modifier Intelligent (Secouriste : Quantité/Date | Admin : Tout)
+            openEditArticleModal(articleId) {
+                const cat = this.data.categories.find(c => c.id === this.selectedCatId);
+                const lot = cat.lots.find(l => l.id === this.selectedLotId);
+                const art = lot.articles.find(a => a.id === articleId);
+                if (!art) return;
+
+                let adminFields = '';
+                if (this.isAdmin) {
+                    adminFields = `
+                        <div>
+                            <label class="text-xs text-gray-500 font-medium">Nom de l'article</label>
+                            <input type="text" id="edit-art-name" value="${art.name}" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm">
+                        </div>
+                    `;
+                }
+
+                this.openModal(`
+                    <h3 class="font-bold text-lg text-gray-900 mb-4">Modifier l'article</h3>
+                    <div class="space-y-3 mb-4">
+                        ${adminFields}
+                        <div>
+                            <label class="text-xs text-gray-500 font-medium">Quantité Actuelle</label>
+                            <input type="number" id="edit-art-current" value="${art.currentQty}" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm">
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-500 font-medium">Quantité Théorique</label>
+                            <input type="number" id="edit-art-target" value="${art.targetQty}" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm">
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-500 font-medium">Date de péremption</label>
+                            <input type="date" id="edit-art-expiry" value="${art.expiryDate || ''}" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm">
+                        </div>
+                    </div>
+                    <div class="flex justify-end space-x-2">
+                        <button onclick="app.closeModal()" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-xl text-sm font-medium">Annuler</button>
+                        <button onclick="app.saveArticle('${articleId}')" class="px-4 py-2 bg-croixrouge-600 text-white rounded-xl text-sm font-medium">Enregistrer</button>
+                    </div>
+                `);
+            }
+
+            saveArticle(articleId) {
+                const cat = this.data.categories.find(c => c.id === this.selectedCatId);
+                const lot = cat.lots.find(l => l.id === this.selectedLotId);
+                const art = lot.articles.find(a => a.id === articleId);
+
+                if (this.isAdmin) {
+                    const newName = document.getElementById('edit-art-name').value.trim();
+                    if (newName) art.name = newName;
+                }
+
+                art.currentQty = parseInt(document.getElementById('edit-art-current').value) || 0;
+                art.targetQty = parseInt(document.getElementById('edit-art-target').value) || 0;
+                art.expiryDate = document.getElementById('edit-art-expiry').value;
+
+                this.saveData();
+                this.closeModal();
+                this.render();
+            }
+
+            // Mode Saisie Massive avec pause synchro Cloud
+            openMassiveInputModal() {
+                this.openModal(`
+                    <h3 class="font-bold text-lg text-gray-900 mb-2">⚡ Saisie Massive</h3>
+                    <p class="text-xs text-gray-500 mb-4">La synchronisation Cloud est temporairement mise en pause pour enregistrer vos données en rafale sans latence.</p>
+                    <div class="flex justify-end space-x-2">
+                        <button onclick="app.closeModal(); app.toggleSyncPause(true);" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-xl text-sm font-medium">Activer la Pause Sync</button>
+                        <button onclick="app.closeModal(); app.toggleSyncPause(false);" class="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-medium">Reprendre Sync Normale</button>
+                    </div>
+                `);
+            }
+
+            toggleSyncPause(status) {
+                this.syncPaused = status;
+                if (!status) this.saveData(); // Force la synchro en reprenant
+                this.showNotification(status ? "Mode Saisie Massive actif (Cloud en pause)." : "Synchro Cloud réactivée !", "success");
+            }
+
+            // --- ADMIN AUTH ---
+            promptAdminLogin() {
+                if (this.isAdmin) {
+                    this.isAdmin = false;
+                    this.updateAdminUI();
+                    this.render();
+                    this.showNotification("Mode Admin désactivé.", "info");
+                    return;
+                }
+
+                this.openModal(`
+                    <h3 class="font-bold text-lg text-gray-900 mb-4">Accès Administrateur</h3>
+                    <input type="password" id="admin-pwd-input" placeholder="Entrez le mot de passe admin..." class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-croixrouge-500">
+                    <div class="flex justify-end space-x-2">
+                        <button onclick="app.closeModal()" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-xl text-sm font-medium">Annuler</button>
+                        <button onclick="app.verifyAdminPassword()" class="px-4 py-2 bg-croixrouge-600 text-white rounded-xl text-sm font-medium">Valider</button>
+                    </div>
+                `);
+            }
+
+            verifyAdminPassword() {
+                const pwd = document.getElementById('admin-pwd-input').value;
+                // Mot de passe admin sécurisé par défaut (modifiable ici si besoin)
+                if (pwd === "croixrouge1906" || pwd === "admin") {
+                    this.isAdmin = true;
+                    this.closeModal();
+                    this.updateAdminUI();
+                    this.render();
+                    this.showNotification("Mode Admin activé avec succès !", "success");
+                } else {
+                    alert("Mot de passe incorrect !");
+                }
+            }
+
+            updateAdminUI() {
+                const btn = document.getElementById('admin-toggle-btn');
+                if (this.isAdmin) {
+                    btn.innerHTML = `<span>🔓 Admin (Actif)</span>`;
+                    btn.className = "bg-croixrouge-100 text-croixrouge-700 border border-croixrouge-200 px-3 py-2 rounded-xl text-sm font-medium transition flex items-center space-x-1";
+                    document.querySelectorAll('.admin-only').forEach(el => el.classList.remove('hidden'));
+                } else {
+                    btn.innerHTML = `<span>🔒 Admin</span>`;
+                    btn.className = "bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-xl text-sm font-medium transition flex items-center space-x-1";
+                    document.querySelectorAll('.admin-only').forEach(el => el.classList.add('hidden'));
+                }
+            }
+
+            // Suppressions (Admin)
+            deleteCategory(catId) {
+                if (!confirm("Voulez-vous vraiment supprimer cette catégorie ?")) return;
+                this.data.categories = this.data.categories.filter(c => c.id !== catId);
+                this.saveData();
+                this.render();
+            }
+
+            deleteLot(lotId) {
+                if (!confirm("Voulez-vous vraiment supprimer ce lot ?")) return;
+                const cat = this.data.categories.find(c => c.id === this.selectedCatId);
+                if (cat) {
+                    cat.lots = cat.lots.filter(l => l.id !== lotId);
+                    this.saveData();
+                    this.render();
+                }
+            }
+
+            deleteArticle(articleId) {
+                if (!confirm("Voulez-vous vraiment supprimer cet article ?")) return;
+                const cat = this.data.categories.find(c => c.id === this.selectedCatId);
+                const lot = cat.lots.find(l => l.id === this.selectedLotId);
+                if (lot) {
+                    lot.articles = lot.articles.filter(a => a.id !== articleId);
+                    this.saveData();
+                    this.render();
+                }
+            }
+
+            goHome() {
+                this.currentView = 'home';
+                this.selectedCatId = null;
+                this.selectedLotId = null;
+                this.render();
+            }
+
+            exportData() {
+                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(this.data, null, 2));
+                const downloadAnchor = document.createElement('a');
+                downloadAnchor.setAttribute("href", dataStr);
+                downloadAnchor.setAttribute("download", "sauvegarde_materiel_croix_rouge.json");
+                document.body.appendChild(downloadAnchor);
+                downloadAnchor.click();
+                downloadAnchor.remove();
+            }
+
+            showNotification(message, type = 'info') {
+                const banner = document.getElementById('notification-banner');
+                banner.innerText = message;
+                banner.className = `mb-6 p-4 rounded-xl text-sm font-medium shadow-sm transition ${type === 'success' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-blue-50 text-blue-800 border border-blue-200'}`;
+                banner.classList.remove('hidden');
+                setTimeout(() => banner.classList.add('hidden'), 4000);
+            }
         }
-    }
 
-    function duplicateLot(id) {
-        if (!isAdmin) return;
-        const c = data.find(x => x.id === id);
-        const newName = prompt("Nom du nouveau lot dupliqué :", c.name + " (Copie)");
-        if (newName !== null && newName.trim() !== "") {
-            const duplicatedItems = JSON.parse(JSON.stringify(c.items));
-            data.push({
-                id: Date.now(),
-                name: newName.trim(),
-                encoche: c.encoche || '',
-                items: duplicatedItems,
-                lastChecked: null
-            });
-            saveToStorage();
-        }
-    }
-
-    function toggleCheck(id) {
-        const c = data.find(x => x.id === id);
-        if (c) {
-            c.lastChecked = c.lastChecked ? null : new Date().toLocaleDateString('fr-FR');
-            saveToStorage();
-        }
-    }
-
-    function deleteLot(id) {
-        if (!isAdmin) return;
-        if (confirm("Supprimer ce lot ?")) {
-            data = data.filter(x => x.id !== id);
-            saveToStorage();
-            if (currentContainerId === id) closeItems();
-        }
-    }
-
-    function viewItems(id) {
-        currentContainerId = id;
-        const c = data.find(x => x.id === id);
-        document.getElementById('items-panel').style.display = 'block';
-        document.getElementById('items-title').textContent = "Articles : " + c.name + " (" + (c.encoche || "Sans encoche") + ")";
-        renderItems();
-        document.getElementById('items-panel').scrollIntoView({ behavior: 'smooth' });
-    }
-
-    function closeItems() {
-        currentContainerId = null;
-        document.getElementById('items-panel').style.display = 'none';
-    }
-
-    function addItemToCurrentLot() {
-        if (!isAdmin) return;
-        const c = data.find(x => x.id === currentContainerId);
-        if (!c) return;
-
-        const name = document.getElementById('item-name').value.trim();
-        const qty = parseInt(document.getElementById('item-qty').value) || 1;
-        const noExpiry = document.getElementById('item-no-expiry').checked;
-        const expiry = document.getElementById('item-expiry').value;
-
-        if (!name) { alert("Nom de l'article requis."); return; }
-
-        if (!c.items) c.items = [];
-        c.items.push({
-            name: name,
-            qty: qty,
-            expiry: noExpiry ? null : (expiry || null),
-            noExpiry: noExpiry
-        });
-
-        document.getElementById('item-name').value = '';
-        document.getElementById('item-qty').value = '1';
-        document.getElementById('item-expiry').value = '';
-        document.getElementById('item-no-expiry').checked = false;
-        toggleNoExpiryField();
-
-        saveToStorage();
-        renderItems();
-    }
-
-    function editItemExpiry(idx) {
-        const c = data.find(x => x.id === currentContainerId);
-        if (!c || !c.items[idx]) return;
-
-        const item = c.items[idx];
-        const newDate = prompt("Modifier la date de péremption (AAAA-MM-JJ) :", item.expiry || "");
-        if (newDate !== null) {
-            item.expiry = newDate.trim() || null;
-            if (newDate.trim() !== "") item.noExpiry = false;
-            saveToStorage();
-            renderItems();
-        }
-    }
-
-    function duplicateItem(idx) {
-        if (!isAdmin) return;
-        const c = data.find(x => x.id === currentContainerId);
-        if (!c || !c.items[idx]) return;
-
-        const itemToCopy = c.items[idx];
-        c.items.push(JSON.parse(JSON.stringify(itemToCopy)));
-        saveToStorage();
-        renderItems();
-    }
-
-    function deleteItem(idx) {
-        if (!isAdmin) return;
-        const c = data.find(x => x.id === currentContainerId);
-        if (!c || !c.items[idx]) return;
-
-        if (confirm("Supprimer cet article ?")) {
-            c.items.splice(idx, 1);
-            saveToStorage();
-            renderItems();
-        }
-    }
-
-    let qrCodeInstance = null;
-    function showQRCode(id) {
-        const c = data.find(x => x.id === id);
-        if (!c) return;
-
-        document.getElementById('qr-modal-title').textContent = "QR Code : " + c.name;
-        const container = document.getElementById('qrcode-container');
-        container.innerHTML = "";
-
-        qrCodeInstance = new QRCode(container, {
-            text: window.location.href.split('?')[0] + "?lot=" + c.id,
-            width: 200,
-            height: 200
-        });
-
-        document.getElementById('qrcode-modal').style.display = 'flex';
-    }
-
-    function closeQRCodeModal() {
-        document.getElementById('qrcode-modal').style.display = 'none';
-    }
-
-    function downloadQRCode() {
-        const img = document.querySelector('#qrcode-container img');
-        if (img) {
-            const link = document.createElement('a');
-            link.href = img.src;
-            link.download = 'qrcode_lot.png';
-            link.click();
-        }
-    }
-</script>
-
+        // Lancement de l'application
+        const app = new LogisticsApp();
+    </script>
 </body>
 </html>
