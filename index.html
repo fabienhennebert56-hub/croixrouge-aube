@@ -169,7 +169,8 @@
 </div>
 
 <script>
-    const NPOINT_URL = "https://api.npoint.io/90d426901c1a2e90788a";
+    const API_URL = "https://api.jsonbin.io/v3/b/6a81d9d1da38895dfeebb8b2";
+    const API_KEY = "$2a$10$rvsRxq/Z7qxtzzobIJh3buDRx.5FOPWVBi.ubxnM4AXn.3eyig0Hq";
 
     let data = [];
     let currentContainerId = null;
@@ -177,43 +178,39 @@
     let currentAdminPassword = localStorage.getItem('cr_admin_pwd') || "1234";
 
     async function loadData() {
-        const localCache = JSON.parse(localStorage.getItem('cr_data_github') || '[]');
-        
         try {
-            const response = await fetch(NPOINT_URL);
+            const response = await fetch(API_URL, {
+                headers: { 'X-Master-Key': API_KEY }
+            });
             if (response.ok) {
-                const serverData = await response.json();
-                if (serverData && serverData.length > 0) {
-                    data = serverData;
-                    localStorage.setItem('cr_data_github', JSON.stringify(data));
-                } else if (localCache.length > 0) {
-                    data = localCache;
-                    await saveToStorage();
-                } else {
-                    data = [];
-                }
+                const resData = await response.json();
+                data = resData.record || resData;
+                localStorage.setItem('cr_data_sync', JSON.stringify(data));
             } else {
-                data = localCache;
+                data = JSON.parse(localStorage.getItem('cr_data_sync') || '[]');
             }
         } catch (e) {
-            console.warn("Mode hors-ligne ou erreur réseau, utilisation du cache local.", e);
-            data = localCache;
+            console.warn("Mode hors-ligne, utilisation du cache local.", e);
+            data = JSON.parse(localStorage.getItem('cr_data_sync') || '[]');
         }
         renderContainers();
     }
 
     async function saveToStorage() {
-        localStorage.setItem('cr_data_github', JSON.stringify(data));
+        localStorage.setItem('cr_data_sync', JSON.stringify(data));
         renderContainers();
         
         try {
-            await fetch(NPOINT_URL, {
+            await fetch(API_URL, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Master-Key': API_KEY
+                },
                 body: JSON.stringify(data)
             });
         } catch (e) {
-            console.error("Erreur lors de la synchronisation cloud :", e);
+            console.error("Erreur de synchronisation cloud :", e);
         }
     }
 
