@@ -117,7 +117,7 @@
 
     <table id="items-table">
         <thead>
-            <tr><th>Article</th><th>Quantité</th><th>Date Péremption / Type</th><th id="th-item-actions">Action</th></tr>
+            <tr><th>Article</th><th>Quantité</th><th>Date Péremption / Type</th><th>Actions</th></tr>
         </thead>
         <tbody id="items-body"></tbody>
     </table>
@@ -140,8 +140,6 @@
     let data = JSON.parse(localStorage.getItem('cr_data_github') || '[]');
     let currentContainerId = null;
     let isAdmin = false;
-    
-    // Récupération du mot de passe admin enregistré ou "1234" par défaut
     let currentAdminPassword = localStorage.getItem('cr_admin_pwd') || "1234";
 
     function saveToStorage() {
@@ -360,15 +358,12 @@
     function renderItems() {
         const c = data.find(x => x.id === currentContainerId);
         const tbody = document.getElementById('items-body');
-        const thActions = document.getElementById('th-item-actions');
         
         if (!c || !c.items || c.items.length === 0) { 
-            tbody.innerHTML = `<tr><td colspan="${isAdmin ? 4 : 3}" style="text-align:center;">Vide.</td></tr>`; 
-            thActions.style.display = isAdmin ? 'table-cell' : 'none';
+            tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;">Vide.</td></tr>`; 
             return; 
         }
 
-        thActions.style.display = isAdmin ? 'table-cell' : 'none';
         const now = new Date();
         now.setHours(0, 0, 0, 0);
 
@@ -397,14 +392,15 @@
                 }
             }
 
-            let adminItemActions = '';
+            // Boutons d'actions sur l'article : Modifier la date et Dupliquer sont accessibles à tous. Supprimer/Renommer le nom nécessite d'être Admin.
+            let actionButtons = `
+                <button class="btn btn-small btn-edit" onclick="editItemExpiry(${idx})">📅 Modifier Date</button>
+                <button class="btn btn-small btn-duplicate" onclick="duplicateItem(${idx})">Dupliquer</button>
+            `;
             if (isAdmin) {
-                adminItemActions = `
-                    <td>
-                        <button class="btn btn-small btn-edit" onclick="editItem(${idx})">Modif</button> 
-                        <button class="btn btn-small btn-duplicate" onclick="duplicateItem(${idx})">Dupliquer</button>
-                        <button class="btn btn-small" style="background:#800;" onclick="deleteItem(${idx})">X</button>
-                    </td>
+                actionButtons += `
+                    <button class="btn btn-small btn-edit" style="background:#1976d2;" onclick="editItemName(${idx})">Nom</button>
+                    <button class="btn btn-small" style="background:#800;" onclick="deleteItem(${idx})">X</button>
                 `;
             }
 
@@ -412,7 +408,7 @@
                 <td>${i.name}</td>
                 <td><strong>${i.qty}</strong></td>
                 <td>${expiryHtml}</td>
-                ${adminItemActions}
+                <td>${actionButtons}</td>
             </tr>`;
         }).join('');
     }
@@ -437,16 +433,41 @@
         renderItems();
     }
 
-    function editItem(idx) {
+    // Accessible à tous (pour modifier la date de péremption ou basculer en sans date/électronique)
+    function editItemExpiry(idx) {
+        const c = data.find(x => x.id === currentContainerId);
+        const i = c.items[idx];
+        
+        const choice = prompt(`Modifier la péremption de "${i.name}" :\n1. Entrer une nouvelle date (ex: YYYY-MM-DD ou JJ/MM/AAAA)\n2. Taper "sans" pour le passer en Sans date / Électronique`, i.noExpiry ? "sans" : (i.expiry || ""));
+        
+        if (choice !== null) {
+            const val = choice.trim().toLowerCase();
+            if (val === "sans" || val === "e" || val === "elec") {
+                i.noExpiry = true;
+                i.expiry = null;
+            } else if (val !== "") {
+                i.noExpiry = false;
+                i.expiry = choice.trim();
+            }
+            saveToStorage();
+            renderItems();
+        }
+    }
+
+    // Réservé Admin (pour renommer l'article)
+    function editItemName(idx) {
         if (!isAdmin) return;
         const c = data.find(x => x.id === currentContainerId);
         const i = c.items[idx];
-        const n = prompt("Nom :", i.name);
-        if (n !== null) { i.name = n; saveToStorage(); renderItems(); }
+        const n = prompt("Nouveau nom de l'article :", i.name);
+        if (n !== null && n.trim() !== "") { 
+            i.name = n.trim(); 
+            saveToStorage(); 
+            renderItems(); 
+        }
     }
 
     function duplicateItem(idx) {
-        if (!isAdmin) return;
         const c = data.find(x => x.id === currentContainerId);
         const itemToCopy = c.items[idx];
         
