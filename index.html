@@ -3,954 +3,683 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestion de Matériel - Croix-Rouge</title>
-    <!-- Tailwind CSS pour un design propre et moderne -->
+    <title>Gestion Logistique Croix-Rouge</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        croixrouge: {
-                            50: '#fef2f2',
-                            100: '#fee2e2',
-                            500: '#ef4444',
-                            600: '#dc2626',
-                            700: '#b91c1c',
-                            800: '#991b1b',
-                            900: '#7f1d1d',
-                        }
-                    }
-                }
-            }
-        }
-    </script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        body { font-family: 'Inter', sans-serif; }
+        :root { --croixrouge: #d32f2f; }
+        .bg-croixrouge-600 { background-color: var(--croixrouge); }
+        .text-croixrouge-500 { color: var(--croixrouge); }
+        .ring-croixrouge-500 { --tw-ring-color: var(--croixrouge); }
+        body { background-color: #111827; }
     </style>
 </head>
-<body class="bg-gray-900 text-gray-100 min-h-screen flex flex-col">
+<body class="text-gray-100">
 
-    <!-- En-tête / Navbar -->
-    <header class="bg-gray-800 border-b border-gray-700 sticky top-0 z-30 shadow-md">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-            <!-- Logo Croix-Rouge & Titre -->
-            <div class="flex items-center space-x-3 cursor-pointer" onclick="app.goHome()">
-                <div class="w-10 h-10 bg-croixrouge-600 rounded-xl flex items-center justify-center shadow-md transform hover:scale-105 transition">
-                    <!-- Croix Rouge SVG Officielle -->
-                    <svg class="w-6 h-6 text-white" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M19 10.5h-5.5V5a1.5 1.5 0 0 0-3 0v5.5H5a1.5 1.5 0 0 0 0 3h5.5V19a1.5 1.5 0 0 0 3 0v-5.5H19a1.5 1.5 0 0 0 0-3z"/>
-                    </svg>
-                </div>
-                <div>
-                    <h1 class="font-bold text-white text-lg leading-tight">Secours & Matériel</h1>
-                    <p class="text-xs text-gray-400">Croix-Rouge Française</p>
-                </div>
+    <div id="app" class="max-w-4xl mx-auto p-4 pb-20">
+        <!-- Header -->
+        <header class="flex justify-between items-center mb-6">
+            <div>
+                <h1 class="text-2xl font-bold text-white">Inventaire Croix-Rouge</h1>
+                <p class="text-xs text-gray-400">Gestion et suivi des équipements</p>
             </div>
-
-            <!-- Actions de navigation & Stats rapides -->
-            <div class="flex items-center space-x-2 sm:space-x-4">
-                <!-- Bouton Liste des Manques (Réappros) -->
-                <button onclick="app.openReapproPage()" class="relative bg-gray-700 hover:bg-gray-600 text-amber-400 border border-amber-500/30 px-3 py-2 rounded-xl text-sm font-medium transition flex items-center space-x-2">
-                    <span>📋 Manques</span>
-                    <span id="reappro-badge" class="bg-amber-600 text-white text-xs px-2 py-0.5 rounded-full font-bold hidden">0</span>
+            <div class="flex space-x-2 items-center">
+                <button onclick="app.switchView('home')" class="bg-gray-800 hover:bg-gray-700 text-gray-200 px-3 py-2 rounded-xl text-xs transition">🏠 Accueil</button>
+                <button onclick="app.switchView('reappro')" class="bg-croixrouge-600/80 hover:bg-croixrouge-600 text-white px-3 py-2 rounded-xl text-xs transition flex items-center space-x-1">
+                    <span>⚠️ Réappro</span>
                 </button>
-
-                <!-- Bouton Admin / Déconnexion -->
-                <div id="admin-auth-container">
-                    <button onclick="app.promptAdminLogin()" id="admin-toggle-btn" class="bg-gray-700 hover:bg-gray-600 text-gray-200 px-3 py-2 rounded-xl text-sm font-medium transition flex items-center space-x-1">
-                        <span>🔒 Admin</span>
-                    </button>
-                </div>
-            </div>
-        </div>
-    </header>
-
-    <!-- Contenu Principal -->
-    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        
-        <!-- Fil d'Ariane dynamique -->
-        <nav id="breadcrumb" class="flex text-sm text-gray-400 mb-6 space-x-2 items-center">
-            <span class="cursor-pointer hover:text-croixrouge-500 font-medium" onclick="app.goHome()">Accueil</span>
-        </nav>
-
-        <!-- Zone de Notification / Message -->
-        <div id="notification-banner" class="hidden mb-6 p-4 rounded-xl text-sm font-medium shadow-sm transition"></div>
-
-        <!-- VUE 1 : ACCUEIL (Grandes Catégories - Niveau 1) -->
-        <div id="view-home" class="space-y-6">
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-700">
-                <div>
-                    <h2 class="text-2xl font-bold text-white">Tableau de Bord Logistique</h2>
-                    <p class="text-sm text-gray-400 mt-1">Sélectionnez une catégorie ou utilisez la recherche globale.</p>
-                </div>
-                <div class="flex items-center gap-2 w-full sm:w-auto">
-                    <button onclick="app.openMassiveInputModal()" class="w-full sm:w-auto bg-gray-700 hover:bg-gray-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition shadow-sm flex items-center justify-center space-x-2">
-                        <span>⚡ Saisie Massive</span>
-                    </button>
-                    <!-- Bouton Nouvelle Catégorie toujours visible -->
-                    <button onclick="app.openAddCategoryModal()" class="w-full sm:w-auto bg-croixrouge-600 hover:bg-croixrouge-700 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition shadow-sm flex items-center justify-center space-x-2">
-                        <span>+ Nouvelle Catégorie</span>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Barre de Recherche Globale (Lots / Niveau 2) -->
-            <div class="relative">
-                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                </div>
-                <input type="text" id="global-search-input" oninput="app.handleGlobalSearch(this.value)" placeholder="Rechercher un lot rapidement (ex: Réserve 4)..." class="w-full pl-11 pr-4 py-3 bg-gray-800 text-white placeholder-gray-400 border border-gray-700 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-croixrouge-500 focus:border-transparent shadow-sm">
-                <!-- Dropdown des résultats de recherche globale -->
-                <div id="global-search-dropdown" class="absolute left-0 right-0 mt-2 bg-gray-800 border border-gray-700 rounded-2xl shadow-xl hidden z-20 max-h-60 overflow-y-auto divide-y divide-gray-700"></div>
-            </div>
-
-            <!-- Liste des Catégories -->
-            <div id="categories-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                <!-- Injecté dynamiquement par JS -->
-            </div>
-        </div>
-
-        <!-- VUE 2 : LISTE DES LOTS (Niveau 2) -->
-        <div id="view-category" class="space-y-6 hidden">
-            <div class="flex justify-between items-center bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-700">
-                <div>
-                    <h2 id="category-title" class="text-2xl font-bold text-white"></h2>
-                    <p class="text-sm text-gray-400 mt-1">Lots rattachés à cette catégorie.</p>
-                </div>
-                <button onclick="app.openAddLotModal()" class="bg-croixrouge-600 hover:bg-croixrouge-700 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition shadow-sm">
-                    + Nouveau Lot
+                <button id="admin-toggle-btn" onclick="app.promptAdminLogin()" class="bg-gray-700 text-gray-200 px-3 py-2 rounded-xl text-xs transition">
+                    🔒 Admin
                 </button>
             </div>
-            <div id="lots-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                <!-- Injecté dynamiquement par JS -->
-            </div>
+        </header>
+
+        <!-- Notification Banner -->
+        <div id="notification-banner" class="hidden"></div>
+
+        <!-- Zone de recherche globale (visible en vue Accueil) -->
+        <div id="global-search-container" class="relative mb-6">
+            <input type="text" id="global-search-input" oninput="app.handleGlobalSearch(this.value)" placeholder="Rechercher un lot ou un article..." class="w-full bg-gray-800 border border-gray-700 rounded-2xl px-6 py-3 text-white focus:outline-none focus:ring-2 focus:ring-croixrouge-500 text-sm">
+            <div id="global-search-dropdown" class="absolute z-10 w-full bg-gray-800 border border-gray-700 mt-2 rounded-xl hidden shadow-xl"></div>
         </div>
 
-        <!-- VUE 3 : CONTENU DU LOT / ARTICLES (Niveau 3) -->
-        <div id="view-lot" class="space-y-6 hidden">
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-700">
-                <div>
-                    <div class="flex items-center space-x-3">
-                        <h2 id="lot-title" class="text-2xl font-bold text-white"></h2>
-                        <span id="lot-status-badge" class="px-3 py-1 rounded-full text-xs font-semibold"></span>
-                    </div>
-                    <p class="text-sm text-gray-400 mt-1">Gestion du matériel et des péremptions en temps réel.</p>
-                </div>
-                <div class="flex items-center gap-2">
-                    <button onclick="app.openAddArticleModal()" class="bg-croixrouge-600 hover:bg-croixrouge-700 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition shadow-sm">
-                        + Ajouter un article
-                    </button>
-                </div>
+        <!-- Contenu dynamique -->
+        <div id="main-content"></div>
+
+        <!-- Section Outils Synchronisation JSONBin (Admin) -->
+        <div id="admin-tools-footer" class="hidden mt-8 pt-6 border-t border-gray-800 flex flex-wrap gap-3 justify-between items-center">
+            <div class="text-xs text-gray-400">Synchronisation Cloud JSONBin (Actif)</div>
+            <div class="flex space-x-2">
+                <button onclick="app.syncFromCloud()" class="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 border border-gray-700 text-xs rounded-xl transition">☁️ Forcer Synchro Cloud</button>
+                <button onclick="app.exportData()" class="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 border border-gray-700 text-xs rounded-xl transition">💾 Exporter JSON</button>
             </div>
-
-            <!-- Barre de Recherche Interne au Lot -->
-            <div class="relative">
-                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                </div>
-                <input type="text" id="internal-search-input" oninput="app.handleInternalSearch(this.value)" placeholder="Filtrer les articles dans ce lot (ex: compresse)..." class="w-full pl-11 pr-4 py-3 bg-gray-800 text-white placeholder-gray-400 border border-gray-700 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-croixrouge-500 focus:border-transparent shadow-sm">
-            </div>
-
-            <!-- Liste des articles -->
-            <div class="bg-gray-800 rounded-2xl shadow-sm border border-gray-700 overflow-hidden">
-                <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-700">
-                        <thead class="bg-gray-900/50">
-                            <tr>
-                                <th class="px-6 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Article</th>
-                                <th class="px-6 py-3.5 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">Stock (Actuel / Théorique)</th>
-                                <th class="px-6 py-3.5 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">Péremption</th>
-                                <th class="px-6 py-3.5 text-right text-xs font-semibold text-gray-400 uppercase tracking-wider">Actions Rapides</th>
-                            </tr>
-                        </thead>
-                        <tbody id="articles-table-body" class="divide-y divide-gray-700 bg-gray-800">
-                            <!-- Injecté dynamiquement -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- VUE 4 : PAGE ANNEXE "À RÉAPPROVISIONNER" -->
-        <div id="view-reappro" class="space-y-6 hidden">
-            <div class="flex justify-between items-center bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-700">
-                <div>
-                    <h2 class="text-2xl font-bold text-white">Liste de Réapprovisionnement</h2>
-                    <p class="text-sm text-gray-400 mt-1">Matériel consommé en intervention à renouveler dans les lots.</p>
-                </div>
-                <button onclick="app.goHome()" class="bg-gray-700 hover:bg-gray-600 text-gray-200 px-4 py-2.5 rounded-xl text-sm font-medium transition">
-                    ← Retour Accueil
-                </button>
-            </div>
-
-            <div class="bg-gray-800 rounded-2xl shadow-sm border border-gray-700 overflow-hidden">
-                <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-700">
-                        <thead class="bg-gray-900/50">
-                            <tr>
-                                <th class="px-6 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Article</th>
-                                <th class="px-6 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Lot Concerné</th>
-                                <th class="px-6 py-3.5 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">Manque</th>
-                                <th class="px-6 py-3.5 text-right text-xs font-semibold text-gray-400 uppercase tracking-wider">Validation</th>
-                            </tr>
-                        </thead>
-                        <tbody id="reappro-table-body" class="divide-y divide-gray-700 bg-gray-800">
-                            <!-- Injecté dynamiquement -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-    </main>
-
-    <!-- FOOTER / EXPORT -->
-    <footer class="mt-auto bg-gray-800 border-t border-gray-700 py-4 px-6 text-center text-xs text-gray-400 flex justify-between items-center max-w-7xl mx-auto w-full">
-        <p>Croix-Rouge Française - Gestion Logistique Terrain</p>
-        <button onclick="app.exportData()" class="text-croixrouge-500 hover:text-croixrouge-400 font-medium">📥 Exporter Sauvegarde JSON</button>
-    </footer>
-
-    <!-- MODALE UNIVERSELLE INTÉGRÉE (Zéro Pop-up) -->
-    <div id="modal-container" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div id="modal-box" class="bg-gray-800 text-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-gray-700 transform transition-all">
-            <!-- Rempli dynamiquement par JS -->
         </div>
     </div>
 
-    <!-- SCRIPT APPLICATION -->
-    <script>
-        // Configuration JSONBin
-        const BIN_ID = "6a81d9d1da38895dfeebb8b2"; 
-        const BIN_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
-        const API_KEY = "$2a$10$rvsRxq/Z7qxtzzobIJh3buDRx.5FOPWVBi.ubxnM4AXn.3eyig0Hq"; 
+    <!-- Modale -->
+    <div id="modal-container" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
+        <div id="modal-box" class="bg-gray-800 rounded-2xl p-6 w-full max-w-lg border border-gray-700 shadow-2xl"></div>
+    </div>
 
-        class LogisticsApp {
-            constructor() {
-                this.data = { 
-                    categories: [
-                        { id: 'cat_vehicules', name: 'Véhicules', lots: [] },
-                        { id: 'cat_sacs', name: 'Sacs', lots: [] }
-                    ] 
-                };
-                this.currentView = 'home';
+    <script>
+    class LogisticsApp {
+        constructor() {
+            this.binId = "6a81d9d1da38895dfeebb8b2";
+            this.apiKey = "$2a$10$rvsRxq/Z7qxtzzobIJh3buDRx.5FOPWVBi.ubxnM4AXn.3eyig0Hq";
+            
+            // Données par défaut si localStorage vide
+            this.data = JSON.parse(localStorage.getItem('croix_rouge_data')) || { categories: [] };
+            this.isAdmin = false;
+            this.currentView = 'home'; // 'home', 'lot', 'reappro'
+            this.selectedCatId = null;
+            this.selectedLotId = null;
+            this.searchFilterText = '';
+            
+            this.render();
+            this.syncFromCloud(); // Synchro automatique au démarrage
+        }
+
+        saveData() {
+            localStorage.setItem('croix_rouge_data', JSON.stringify(this.data));
+            this.syncToCloud();
+        }
+
+        async syncToCloud() {
+            try {
+                await fetch(`https://api.jsonbin.io/v3/b/${this.binId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Master-Key': this.apiKey
+                    },
+                    body: JSON.stringify(this.data)
+                });
+            } catch (err) {
+                console.error("Erreur de synchronisation cloud (sauvegarde)", err);
+            }
+        }
+
+        async syncFromCloud() {
+            try {
+                const response = await fetch(`https://api.jsonbin.io/v3/b/${this.binId}/latest`, {
+                    headers: { 'X-Master-Key': this.apiKey }
+                });
+                if (response.ok) {
+                    const resData = await response.json();
+                    if (resData && resData.record && resData.record.categories) {
+                        this.data = resData.record;
+                        localStorage.setItem('croix_rouge_data', JSON.stringify(this.data));
+                        this.render();
+                    }
+                }
+            } catch (err) {
+                console.error("Erreur de synchronisation cloud (chargement)", err);
+            }
+        }
+
+        switchView(view) {
+            this.currentView = view;
+            if (view === 'home') {
                 this.selectedCatId = null;
                 this.selectedLotId = null;
-                this.isAdmin = false;
-                this.syncPaused = false;
-                this.searchFilterText = '';
-                this.init();
             }
+            this.render();
+        }
 
-            async init() {
-                await this.loadData();
-                this.render();
+        render() {
+            const container = document.getElementById('main-content');
+            const searchContainer = document.getElementById('global-search-container');
+            
+            if (this.currentView === 'home') {
+                searchContainer.classList.remove('hidden');
+                container.innerHTML = this.renderHome();
+            } else if (this.currentView === 'lot') {
+                searchContainer.classList.add('hidden');
+                container.innerHTML = this.renderLotView();
+            } else if (this.currentView === 'reappro') {
+                searchContainer.classList.add('hidden');
+                container.innerHTML = this.renderReapproView();
             }
+            this.updateAdminUI();
+        }
 
-            async loadData() {
-                if (this.syncPaused) return;
-                try {
-                    const response = await fetch(`${BIN_URL}/latest`, {
-                        headers: { 'X-Master-Key': API_KEY }
-                    });
-                    if (response.ok) {
-                        const json = await response.json();
-                        if (json.record && json.record.categories) {
-                            this.data = json.record;
-                        }
-                    }
-                } catch (e) {
-                    console.error("Erreur de synchronisation Cloud, utilisation du cache local.", e);
-                    const local = localStorage.getItem('croix_rouge_stock');
-                    if (local) this.data = JSON.parse(local);
-                }
-            }
-
-            async saveData() {
-                localStorage.setItem('croix_rouge_stock', JSON.stringify(this.data));
-                if (this.syncPaused) return;
-                try {
-                    await fetch(BIN_URL, {
-                        method: 'PUT',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-Master-Key': API_KEY
-                        },
-                        body: JSON.stringify(this.data)
-                    });
-                } catch (e) {
-                    console.error("Erreur d'enregistrement Cloud", e);
-                }
-            }
-
-            render() {
-                this.updateReapproBadge();
-                this.updateAdminUI();
-
-                document.getElementById('view-home').classList.add('hidden');
-                document.getElementById('view-category').classList.add('hidden');
-                document.getElementById('view-lot').classList.add('hidden');
-                document.getElementById('view-reappro').classList.add('hidden');
-
-                if (this.currentView === 'home') {
-                    document.getElementById('view-home').classList.remove('hidden');
-                    this.renderCategories();
-                    this.updateBreadcrumb([{ name: 'Accueil' }]);
-                } else if (this.currentView === 'category') {
-                    document.getElementById('view-category').classList.remove('hidden');
-                    this.renderLots();
-                } else if (this.currentView === 'lot') {
-                    document.getElementById('view-lot').classList.remove('hidden');
-                    this.renderArticles();
-                } else if (this.currentView === 'reappro') {
-                    document.getElementById('view-reappro').classList.remove('hidden');
-                    this.renderReapproPage();
-                    this.updateBreadcrumb([{ name: 'Accueil', action: 'goHome()' }, { name: 'Liste de Réapprovisionnement' }]);
-                }
-            }
-
-            updateBreadcrumb(items) {
-                const nav = document.getElementById('breadcrumb');
-                nav.innerHTML = items.map((item, index) => {
-                    if (index === items.length - 1) {
-                        return `<span class="text-white font-semibold">${item.name}</span>`;
-                    }
-                    return `<span class="cursor-pointer hover:text-croixrouge-500 font-medium" onclick="${item.action}">${item.name}</span> / `;
-                }).join(' ');
-            }
-
-            renderCategories() {
-                const grid = document.getElementById('categories-grid');
-                if (!this.data.categories || this.data.categories.length === 0) {
-                    grid.innerHTML = `<div class="col-span-full text-center py-12 text-gray-500">Aucune catégorie enregistrée. Créez-en une !</div>`;
-                    return;
-                }
-
-                grid.innerHTML = this.data.categories.map(cat => {
-                    const totalLots = cat.lots ? cat.lots.length : 0;
-                    return `
-                        <div onclick="app.selectCategory('${cat.id}')" class="bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-700 hover:border-croixrouge-500 hover:shadow-md transition cursor-pointer group relative">
-                            <div class="flex justify-between items-start mb-4">
-                                <div class="w-12 h-12 bg-croixrouge-500/10 text-croixrouge-500 rounded-xl flex items-center justify-center font-bold text-lg group-hover:bg-croixrouge-600 group-hover:text-white transition">
-                                    ${cat.name.charAt(0).toUpperCase()}
-                                </div>
-                                ${this.isAdmin ? `<button onclick="event.stopPropagation(); app.deleteCategory('${cat.id}')" class="text-gray-400 hover:text-red-400 p-1">🗑️</button>` : ''}
+        renderHome() {
+            return `
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    ${this.data.categories.map(cat => `
+                        <div class="bg-gray-800 p-5 rounded-2xl border border-gray-700 hover:border-croixrouge-600 transition">
+                            <div class="flex justify-between items-center mb-4">
+                                <h2 class="font-bold text-lg text-white">${cat.name}</h2>
+                                ${this.isAdmin ? `<button onclick="app.deleteCategory('${cat.id}')" class="text-red-400 text-xs hover:text-red-300">Supprimer</button>` : ''}
                             </div>
-                            <h3 class="font-bold text-lg text-white group-hover:text-croixrouge-500 transition">${cat.name}</h3>
-                            <p class="text-xs text-gray-400 mt-1">${totalLots} lot${totalLots > 1 ? 's' : ''} disponible${totalLots > 1 ? 's' : ''}</p>
-                        </div>
-                    `;
-                }).join('');
-            }
-
-            selectCategory(catId) {
-                this.selectedCatId = catId;
-                this.currentView = 'category';
-                this.render();
-            }
-
-            renderLots() {
-                const cat = this.data.categories.find(c => c.id === this.selectedCatId);
-                if (!cat) return this.goHome();
-
-                document.getElementById('category-title').innerText = cat.name;
-                this.updateBreadcrumb([{ name: 'Accueil', action: 'goHome()' }, { name: cat.name }]);
-
-                const grid = document.getElementById('lots-grid');
-                if (!cat.lots || cat.lots.length === 0) {
-                    grid.innerHTML = `<div class="col-span-full text-center py-12 text-gray-500">Aucun lot dans cette catégorie.</div>`;
-                    return;
-                }
-
-                grid.innerHTML = cat.lots.map(lot => {
-                    const itemCount = lot.articles ? lot.articles.length : 0;
-                    return `
-                        <div onclick="app.selectLot('${lot.id}')" class="bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-700 hover:border-croixrouge-500 hover:shadow-md transition cursor-pointer group">
-                            <div class="flex justify-between items-start mb-4">
-                                <span class="px-3 py-1 bg-gray-700 text-gray-300 rounded-lg text-xs font-semibold">${itemCount} article${itemCount > 1 ? 's' : ''}</span>
-                                ${this.isAdmin ? `<button onclick="event.stopPropagation(); app.deleteLot('${lot.id}')" class="text-gray-400 hover:text-red-400 p-1">🗑️</button>` : ''}
+                            <div class="space-y-2">
+                                ${cat.lots && cat.lots.length > 0 ? cat.lots.map(lot => `
+                                    <button onclick="app.selectLot('${cat.id}', '${lot.id}')" class="w-full text-left bg-gray-900 p-3 rounded-xl hover:bg-gray-700 transition flex justify-between items-center">
+                                        <span class="text-sm font-medium">${lot.name}</span>
+                                        <span class="text-xs text-gray-400">${lot.articles ? lot.articles.length : 0} art.</span>
+                                    </button>
+                                `).join('') : `<p class="text-xs text-gray-500 italic py-1">Aucun lot dans cette catégorie.</p>`}
                             </div>
-                            <h3 class="font-bold text-lg text-white group-hover:text-croixrouge-500 transition">${lot.name}</h3>
+                            <button onclick="app.selectedCatId='${cat.id}'; app.openAddLotModal()" class="w-full mt-4 py-2 border border-dashed border-gray-600 rounded-xl text-xs text-gray-400 hover:border-croixrouge-500 hover:text-white transition">+ Ajouter un lot</button>
                         </div>
-                    `;
-                }).join('');
-            }
+                    `).join('')}
+                </div>
+                <button onclick="app.openAddCategoryModal()" class="w-full mt-6 py-4 bg-gray-800 border-2 border-dashed border-gray-700 rounded-2xl text-sm text-gray-400 hover:border-croixrouge-500 hover:text-white transition">
+                    + Ajouter une catégorie
+                </button>
+            `;
+        }
 
-            selectLot(lotId) {
-                this.selectedLotId = lotId;
-                this.currentView = 'lot';
-                this.render();
-            }
+        selectLot(catId, lotId) {
+            this.selectedCatId = catId;
+            this.selectedLotId = lotId;
+            this.currentView = 'lot';
+            this.searchFilterText = '';
+            this.render();
+        }
 
-            renderArticles() {
-                const cat = this.data.categories.find(c => c.id === this.selectedCatId);
-                const lot = cat ? cat.lots.find(l => l.id === this.selectedLotId) : null;
-                if (!lot) return this.goHome();
+        renderLotView() {
+            const cat = this.data.categories.find(c => c.id === this.selectedCatId);
+            const lot = cat ? cat.lots.find(l => l.id === this.selectedLotId) : null;
+            if (!lot) return `<p>Lot introuvable.</p>`;
 
-                document.getElementById('lot-title').innerText = lot.name;
-                this.updateBreadcrumb([
-                    { name: 'Accueil', action: 'goHome()' }, 
-                    { name: cat.name, action: `app.selectCategory('${cat.id}')` }, 
-                    { name: lot.name }
-                ]);
+            const articles = lot.articles || [];
+            const filteredArticles = articles.filter(art => art.name.toLowerCase().includes(this.searchFilterText.toLowerCase()));
 
-                const tbody = document.getElementById('articles-table-body');
-                let articles = lot.articles || [];
-
-                if (this.searchFilterText) {
-                    const query = this.searchFilterText.toLowerCase();
-                    articles = articles.filter(a => a.name.toLowerCase().includes(query));
-                }
-
-                if (articles.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="4" class="px-6 py-8 text-center text-gray-500">Aucun article trouvé.</td></tr>`;
-                    return;
-                }
-
-                const today = new Date();
-
-                tbody.innerHTML = articles.map(art => {
-                    let expBadge = '';
-                    if (art.expiryDate) {
-                        const expDate = new Date(art.expiryDate);
-                        const diffMonths = (expDate - today) / (1000 * 60 * 60 * 24 * 30);
-                        if (expDate < today) {
-                            expBadge = `<span class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-red-900/50 text-red-300 border border-red-700/50">❌ Périmé (${art.expiryDate})</span>`;
-                        } else if (diffMonths <= 3) {
-                            expBadge = `<span class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-900/50 text-amber-300 border border-amber-700/50">⚠️ Bientôt (${art.expiryDate})</span>`;
-                        } else {
-                            expBadge = `<span class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium bg-emerald-900/30 text-emerald-400 border border-emerald-700/30">🟢 ${art.expiryDate}</span>`;
-                        }
-                    } else {
-                        expBadge = `<span class="text-xs text-gray-500">Non renseignée</span>`;
-                    }
-
-                    const isLow = art.currentQty < art.targetQty;
-                    const qtyBadgeClass = isLow ? 'bg-amber-900/50 text-amber-300 border border-amber-700/50' : 'bg-gray-700 text-gray-200';
-
-                    return `
-                        <tr class="hover:bg-gray-700/30 transition">
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="font-semibold text-white">${art.name}</span>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-center">
-                                <div class="inline-flex items-center space-x-2">
-                                    <button onclick="app.adjustQuantity('${art.id}', -1)" class="w-8 h-8 rounded-lg bg-gray-700 hover:bg-gray-600 text-white font-bold flex items-center justify-center transition">-</button>
-                                    <span class="px-3 py-1 rounded-xl text-sm font-bold ${qtyBadgeClass}">
-                                        ${art.currentQty} / ${art.targetQty}
-                                    </span>
-                                    <button onclick="app.adjustQuantity('${art.id}', 1)" class="w-8 h-8 rounded-lg bg-gray-700 hover:bg-gray-600 text-white font-bold flex items-center justify-center transition">+</button>
+            return `
+                <button onclick="app.switchView('home')" class="mb-4 text-xs text-gray-400 hover:text-white transition flex items-center space-x-1">
+                    <span>← Retour aux catégories</span>
+                </button>
+                <div class="bg-gray-800 p-5 rounded-2xl border border-gray-700 mb-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <div>
+                            <span class="text-xs text-croixrouge-500 font-bold uppercase tracking-wider">${cat.name}</span>
+                            <h2 class="text-xl font-bold text-white">${lot.name}</h2>
+                        </div>
+                        <div class="flex space-x-2">
+                            ${this.isAdmin ? `<button onclick="app.deleteLot('${lot.id}')" class="px-3 py-1.5 bg-red-900/40 text-red-300 rounded-xl text-xs font-medium hover:bg-red-900/60 transition">Supprimer le lot</button>` : ''}
+                            <button onclick="app.openAddArticleModal()" class="px-3 py-1.5 bg-croixrouge-600 text-white rounded-xl text-xs font-medium hover:bg-croixrouge-700 transition">+ Ajouter un article</button>
+                        </div>
+                    </div>
+                    <div class="relative">
+                        <input type="text" oninput="app.handleInternalSearch(this.value)" value="${this.searchFilterText}" placeholder="Filtrer les articles de ce lot..." class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-croixrouge-500">
+                    </div>
+                </div>
+                <div class="space-y-3" id="articles-container">
+                    ${filteredArticles.length === 0 ? `<p class="text-center text-gray-500 text-sm py-8">Aucun article trouvé dans ce lot.</p>` : filteredArticles.map(art => `
+                        <div class="bg-gray-800 p-4 rounded-xl border border-gray-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                            <div class="space-y-1">
+                                <h3 class="font-bold text-white text-sm">${art.name}</h3>
+                                <div class="flex items-center space-x-3 text-xs text-gray-400">
+                                    <span>Actuel : <strong class="text-white">${art.currentQty}</strong></span>
+                                    <span>Cible : <strong class="text-white">${art.targetQty}</strong></span>
+                                    ${art.expiryDate ? `<span>Péremption : <strong class="${new Date(art.expiryDate) < new Date() ? 'text-red-400' : 'text-emerald-400'}">${art.expiryDate}</strong></span>` : ''}
                                 </div>
-                                ${isLow ? `<div class="text-[10px] text-amber-400 font-semibold mt-1">Manque ${art.targetQty - art.currentQty}</div>` : ''}
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-center">
-                                ${expBadge}
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-right space-x-2">
-                                <button onclick="app.openEditArticleModal('${art.id}')" class="text-indigo-400 hover:text-indigo-300 text-sm font-medium">Modifier</button>
-                                ${this.isAdmin ? `<button onclick="app.deleteArticle('${art.id}')" class="text-red-400 hover:text-red-300 text-sm font-medium">Supprimer</button>` : ''}
-                            </td>
-                        </tr>
-                    `;
-                }).join('');
-            }
+                            </div>
+                            <div class="flex items-center space-x-2 w-full sm:w-auto justify-end">
+                                <!-- Boutons rapides + / - -->
+                                <div class="flex items-center bg-gray-900 rounded-xl border border-gray-700 p-1 mr-2">
+                                    <button onclick="app.updateQty('${art.id}', -1)" class="w-7 h-7 flex items-center justify-center bg-gray-800 hover:bg-gray-700 rounded-lg text-sm font-bold text-white transition">-</button>
+                                    <span class="px-3 text-xs font-bold text-white">${art.currentQty}</span>
+                                    <button onclick="app.updateQty('${art.id}', 1)" class="w-7 h-7 flex items-center justify-center bg-gray-800 hover:bg-gray-700 rounded-lg text-sm font-bold text-white transition">+</button>
+                                </div>
+                                <button onclick="app.openEditArticleModal('${art.id}')" class="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 rounded-lg text-xs font-medium transition">Modifier</button>
+                                ${this.isAdmin ? `<button onclick="app.deleteArticle('${art.id}')" class="px-3 py-1.5 bg-red-900/40 hover:bg-red-900/60 text-red-300 rounded-lg text-xs font-medium transition">Supprimer</button>` : ''}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
 
-            adjustQuantity(articleId, delta) {
-                const cat = this.data.categories.find(c => c.id === this.selectedCatId);
-                const lot = cat.lots.find(l => l.id === this.selectedLotId);
-                const art = lot.articles.find(a => a.id === articleId);
-
-                if (!art) return;
-
-                art.currentQty = Math.max(0, art.currentQty + delta);
-                this.saveData();
-                this.renderArticles();
-                this.updateReapproBadge();
-            }
-
-            openReapproPage() {
-                this.currentView = 'reappro';
-                this.render();
-            }
-
-            renderReapproPage() {
-                const tbody = document.getElementById('reappro-table-body');
-                let missingItems = [];
-
-                this.data.categories.forEach(cat => {
+        renderReapproView() {
+            let itemsToReappro = [];
+            this.data.categories.forEach(cat => {
+                if (cat.lots) {
                     cat.lots.forEach(lot => {
                         if (lot.articles) {
                             lot.articles.forEach(art => {
                                 if (art.currentQty < art.targetQty) {
-                                    missingItems.push({
+                                    itemsToReappro.push({
                                         catName: cat.name,
-                                        lotId: lot.id,
                                         lotName: lot.name,
-                                        articleId: art.id,
-                                        articleName: art.name,
-                                        current: art.currentQty,
-                                        target: art.targetQty,
+                                        art: art,
                                         missing: art.targetQty - art.currentQty
                                     });
                                 }
                             });
                         }
                     });
-                });
-
-                if (missingItems.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="4" class="px-6 py-12 text-center text-gray-500">Parfait ! Aucun matériel manquant dans les lots.</td></tr>`;
-                    return;
                 }
+            });
 
-                tbody.innerHTML = missingItems.map(item => `
-                    <tr class="hover:bg-gray-700/30 transition">
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="font-semibold text-white">${item.articleName}</span>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="text-xs font-medium bg-gray-700 text-gray-300 px-2.5 py-1 rounded-lg">${item.lotName}</span>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-center">
-                            <span class="px-3 py-1 rounded-xl text-xs font-bold bg-amber-900/50 text-amber-300 border border-amber-700/50">Manque ${item.missing}</span>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-right">
-                            <button onclick="app.resolveReappro('${item.lotId}', '${item.articleId}')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-xl text-xs font-medium transition shadow-sm">
-                                C'est fait (Réapprovisionné)
-                            </button>
-                        </td>
-                    </tr>
-                `).join('');
+            return `
+                <button onclick="app.switchView('home')" class="mb-4 text-xs text-gray-400 hover:text-white transition flex items-center space-x-1">
+                    <span>← Retour à l'accueil</span>
+                </button>
+                <div class="bg-gray-800 p-5 rounded-2xl border border-gray-700 mb-6">
+                    <h2 class="text-xl font-bold text-white">Liste de Réapprovisionnement</h2>
+                    <p class="text-xs text-gray-400">Articles dont le stock actuel est inférieur au stock théorique cible.</p>
+                </div>
+                <div class="space-y-3">
+                    ${itemsToReappro.length === 0 ? `<p class="text-center text-gray-500 text-sm py-12">Tout est complet ! Aucun réapprovisionnement nécessaire pour le moment.</p>` : itemsToReappro.map(item => `
+                        <div class="bg-gray-800 p-4 rounded-xl border border-gray-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                            <div class="space-y-1">
+                                <span class="text-xs text-croixrouge-500 font-bold uppercase tracking-wider">${item.catName} > ${item.lotName}</span>
+                                <h3 class="font-bold text-white text-sm">${item.art.name}</h3>
+                                <div class="flex items-center space-x-3 text-xs text-gray-400">
+                                    <span>Actuel : <strong class="text-white">${item.art.currentQty}</strong></span>
+                                    <span>Cible : <strong class="text-white">${item.art.targetQty}</strong></span>
+                                    <span class="text-croixrouge-500 font-bold">Manque : ${item.missing}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        updateQty(artId, change) {
+            const cat = this.data.categories.find(c => c.id === this.selectedCatId);
+            const lot = cat ? cat.lots.find(l => l.id === this.selectedLotId) : null;
+            const art = lot ? lot.articles.find(a => a.id === artId) : null;
+            if (!art) return;
+
+            art.currentQty = Math.max(0, art.currentQty + change);
+            this.saveData();
+            this.renderArticles();
+        }
+
+        handleGlobalSearch(query) {
+            const dropdown = document.getElementById('global-search-dropdown');
+            const q = query.toLowerCase().trim();
+            if (!q) {
+                dropdown.classList.add('hidden');
+                dropdown.innerHTML = '';
+                return;
             }
 
-            resolveReappro(lotId, articleId) {
-                for (const cat of this.data.categories) {
-                    const lot = cat.lots.find(l => l.id === lotId);
-                    if (lot) {
-                        const art = lot.articles.find(a => a.id === articleId);
-                        if (art) {
-                            art.currentQty = art.targetQty; 
-                            break;
-                        }
-                    }
+            let results = [];
+            this.data.categories.forEach(cat => {
+                if (cat.name.toLowerCase().includes(q)) {
+                    results.push({ type: 'cat', catId: cat.id, title: cat.name, subtitle: 'Catégorie' });
                 }
-                this.saveData();
-                this.renderReapproPage();
-                this.showNotification("Stock réapprovisionné avec succès !", "success");
-            }
-
-            updateReapproBadge() {
-                let missingCount = 0;
-                this.data.categories.forEach(cat => {
-                    cat.lots.forEach(lot => {
-                        if (lot.articles) {
-                            lot.articles.forEach(art => {
-                                if (art.currentQty < art.targetQty) missingCount++;
-                            });
-                        }
-                    });
-                });
-                const badge = document.getElementById('reappro-badge');
-                if (missingCount > 0) {
-                    badge.innerText = missingCount;
-                    badge.classList.remove('hidden');
-                } else {
-                    badge.classList.add('hidden');
-                }
-            }
-
-            // --- RECHERCHE INTELLIGENTE ---
-            handleGlobalSearch(query) {
-                const dropdown = document.getElementById('global-search-dropdown');
-                if (!query || query.trim() === '') {
-                    dropdown.classList.add('hidden');
-                    dropdown.innerHTML = '';
-                    return;
-                }
-
-                const q = query.toLowerCase();
-                let results = [];
-
-                this.data.categories.forEach(cat => {
+                if (cat.lots) {
                     cat.lots.forEach(lot => {
                         if (lot.name.toLowerCase().includes(q)) {
-                            results.push({
-                                type: 'lot',
-                                catId: cat.id,
-                                catName: cat.name,
-                                lotId: lot.id,
-                                name: lot.name,
-                                info: `Catégorie : ${cat.name}`
-                            });
+                            results.push({ type: 'lot', catId: cat.id, catName: cat.name, lotId: lot.id, title: lot.name, subtitle: `Lot dans ${cat.name}` });
                         }
                         if (lot.articles) {
                             lot.articles.forEach(art => {
                                 if (art.name.toLowerCase().includes(q)) {
-                                    results.push({
-                                        type: 'article',
-                                        catId: cat.id,
-                                        lotId: lot.id,
-                                        name: art.name,
-                                        info: `Lot : ${lot.name} (${art.currentQty}/${art.targetQty})`
-                                    });
+                                    results.push({ type: 'article', catId: cat.id, catName: cat.name, lotId: lot.id, lotName: lot.name, title: art.name, subtitle: `Article dans ${cat.name} > ${lot.name}` });
                                 }
                             });
                         }
                     });
-                });
-
-                if (results.length === 0) {
-                    dropdown.innerHTML = `<div class="p-4 text-xs text-gray-400 text-center">Aucun résultat trouvé</div>`;
-                    dropdown.classList.remove('hidden');
-                    return;
                 }
+            });
 
-                dropdown.innerHTML = results.slice(0, 8).map(res => `
-                    <div onclick="app.selectSearchResult('${res.catId}', '${res.lotId}', '${res.type}')" class="p-3 hover:bg-gray-700/50 cursor-pointer transition flex justify-between items-center">
-                        <div>
-                            <div class="font-semibold text-white text-sm">${res.name}</div>
-                            <div class="text-xs text-gray-400">${res.info}</div>
-                        </div>
-                        <span class="text-xs bg-gray-700 text-gray-300 px-2 py-1 rounded">Aller →</span>
+            if (results.length === 0) {
+                dropdown.innerHTML = `<div class="p-4 text-center text-gray-400 text-sm">Aucun résultat trouvé.</div>`;
+            } else {
+                dropdown.innerHTML = results.slice(0, 5).map(res => `
+                    <div onclick="app.jumpToResult('${res.catId}', '${res.lotId || ''}')" class="p-3.5 hover:bg-gray-700/50 cursor-pointer transition flex flex-col border-b border-gray-700/50 last:border-none">
+                        <span class="font-semibold text-white text-sm">${res.title}</span>
+                        <span class="text-xs text-gray-400">${res.subtitle}</span>
                     </div>
                 `).join('');
-                dropdown.classList.remove('hidden');
             }
+            dropdown.classList.remove('hidden');
+        }
 
-            selectSearchResult(catId, lotId, type) {
-                document.getElementById('global-search-dropdown').classList.add('hidden');
-                document.getElementById('global-search-input').value = '';
-                this.selectCategory(catId);
-                if (type === 'lot' || type === 'article') {
-                    this.selectLot(lotId);
-                }
-            }
-
-            handleInternalSearch(query) {
-                this.searchFilterText = query;
-                this.renderArticles();
-            }
-
-            goHome() {
+        jumpToResult(catId, lotId) {
+            document.getElementById('global-search-dropdown').classList.add('hidden');
+            document.getElementById('global-search-input').value = '';
+            this.selectedCatId = catId;
+            if (lotId) {
+                this.selectedLotId = lotId;
+                this.currentView = 'lot';
+            } else {
                 this.currentView = 'home';
-                this.selectedCatId = null;
-                this.selectedLotId = null;
-                this.searchFilterText = '';
-                document.getElementById('global-search-input').value = '';
-                document.getElementById('global-search-dropdown').classList.add('hidden');
+            }
+            this.render();
+        }
+
+        handleInternalSearch(value) {
+            this.searchFilterText = value;
+            this.renderArticles();
+        }
+
+        renderArticles() {
+            const container = document.getElementById('articles-container');
+            if (!container) return;
+            const cat = this.data.categories.find(c => c.id === this.selectedCatId);
+            const lot = cat ? cat.lots.find(l => l.id === this.selectedLotId) : null;
+            if (!lot) return;
+
+            const articles = lot.articles || [];
+            const filteredArticles = articles.filter(art => art.name.toLowerCase().includes(this.searchFilterText.toLowerCase()));
+
+            container.innerHTML = filteredArticles.length === 0 ? `<p class="text-center text-gray-500 text-sm py-8">Aucun article trouvé dans ce lot.</p>` : filteredArticles.map(art => `
+                <div class="bg-gray-800 p-4 rounded-xl border border-gray-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div class="space-y-1">
+                        <h3 class="font-bold text-white text-sm">${art.name}</h3>
+                        <div class="flex items-center space-x-3 text-xs text-gray-400">
+                            <span>Actuel : <strong class="text-white">${art.currentQty}</strong></span>
+                            <span>Cible : <strong class="text-white">${art.targetQty}</strong></span>
+                            ${art.expiryDate ? `<span>Péremption : <strong class="${new Date(art.expiryDate) < new Date() ? 'text-red-400' : 'text-emerald-400'}">${art.expiryDate}</strong></span>` : ''}
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-2 w-full sm:w-auto justify-end">
+                        <div class="flex items-center bg-gray-900 rounded-xl border border-gray-700 p-1 mr-2">
+                            <button onclick="app.updateQty('${art.id}', -1)" class="w-7 h-7 flex items-center justify-center bg-gray-800 hover:bg-gray-700 rounded-lg text-sm font-bold text-white transition">-</button>
+                            <span class="px-3 text-xs font-bold text-white">${art.currentQty}</span>
+                            <button onclick="app.updateQty('${art.id}', 1)" class="w-7 h-7 flex items-center justify-center bg-gray-800 hover:bg-gray-700 rounded-lg text-sm font-bold text-white transition">+</button>
+                        </div>
+                        <button onclick="app.openEditArticleModal('${art.id}')" class="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 rounded-lg text-xs font-medium transition">Modifier</button>
+                        ${this.isAdmin ? `<button onclick="app.deleteArticle('${art.id}')" class="px-3 py-1.5 bg-red-900/40 hover:bg-red-900/60 text-red-300 rounded-lg text-xs font-medium transition">Supprimer</button>` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        promptAdminLogin() {
+            if (this.isAdmin) {
+                this.isAdmin = false;
+                this.showNotification("Mode Admin désactivé.", "info");
                 this.render();
+                return;
             }
 
-            // --- ADMIN AUTH ---
-            promptAdminLogin() {
-                if (this.isAdmin) {
-                    this.isAdmin = false;
-                    this.showNotification("Mode Admin désactivé.", "info");
-                    this.render();
-                    return;
-                }
-
-                this.openModal(`
-                    <h3 class="text-lg font-bold text-white mb-4">Connexion Administrateur</h3>
-                    <p class="text-xs text-gray-400 mb-4">Entrez le mot de passe administrateur pour accéder aux actions de suppression.</p>
-                    <input type="password" id="admin-pwd-input" placeholder="Mot de passe..." class="w-full px-4 py-2.5 bg-gray-700 text-white border border-gray-600 rounded-xl text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-croixrouge-500">
+            this.openModal(`
+                <h3 class="text-xl font-bold mb-4 text-white">Connexion Administrateur</h3>
+                <p class="text-sm text-gray-300 mb-4">Entrez le mot de passe administrateur (croixrouge10).</p>
+                <form onsubmit="app.verifyAdminPassword(event)">
+                    <input type="password" id="admin-pwd-input" placeholder="Mot de passe..." class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2.5 text-white mb-4 text-sm focus:outline-none focus:ring-2 focus:ring-croixrouge-500" required autofocus>
                     <div class="flex justify-end space-x-2">
-                        <button onclick="app.closeModal()" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-xl text-sm font-medium">Annuler</button>
-                        <button onclick="app.verifyAdmin()" class="px-4 py-2 bg-croixrouge-600 hover:bg-croixrouge-700 text-white rounded-xl text-sm font-medium">Valider</button>
+                        <button type="button" onclick="app.closeModal()" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-xl text-sm font-medium">Annuler</button>
+                        <button type="submit" class="px-4 py-2 bg-croixrouge-600 hover:bg-croixrouge-700 rounded-xl text-sm font-medium">Valider</button>
                     </div>
-                `);
-            }
+                </form>
+            `);
+        }
 
-            verifyAdmin() {
-                const pwd = document.getElementById('admin-pwd-input').value;
-                if (pwd === "croixrouge2026" || pwd === "admin") {
-                    this.isAdmin = true;
-                    this.closeModal();
-                    this.showNotification("Mode Admin activé avec succès !", "success");
-                    this.render();
-                } else {
-                    this.showNotification("Mot de passe incorrect.", "error");
-                }
-            }
-
-            updateAdminUI() {
-                const btn = document.getElementById('admin-toggle-btn');
-                if (this.isAdmin) {
-                    btn.innerHTML = `<span>🔓 Admin (Actif)</span>`;
-                    btn.className = "bg-croixrouge-600 hover:bg-croixrouge-700 text-white px-3 py-2 rounded-xl text-sm font-medium transition flex items-center space-x-1";
-                } else {
-                    btn.innerHTML = `<span>🔒 Admin</span>`;
-                    btn.className = "bg-gray-700 hover:bg-gray-600 text-gray-200 px-3 py-2 rounded-xl text-sm font-medium transition flex items-center space-x-1";
-                }
-            }
-
-            // --- GESTION MODALES & FORMULAIRES ---
-            openModal(htmlContent) {
-                const modalBox = document.getElementById('modal-box');
-                modalBox.innerHTML = htmlContent;
-                document.getElementById('modal-container').classList.remove('hidden');
-            }
-
-            closeModal() {
-                document.getElementById('modal-container').classList.add('hidden');
-            }
-
-            showNotification(message, type = 'success') {
-                const banner = document.getElementById('notification-banner');
-                banner.innerText = message;
-                banner.className = `mb-6 p-4 rounded-xl text-sm font-medium shadow-sm transition ${
-                    type === 'error' ? 'bg-red-900/50 text-red-300 border border-red-700/50' :
-                    type === 'info' ? 'bg-blue-900/50 text-blue-300 border border-blue-700/50' :
-                    'bg-emerald-900/50 text-emerald-300 border border-emerald-700/50'
-                }`;
-                banner.classList.remove('hidden');
-                setTimeout(() => {
-                    banner.classList.add('hidden');
-                }, 4000);
-            }
-
-            // Catégories
-            openAddCategoryModal() {
-                this.openModal(`
-                    <h3 class="text-lg font-bold text-white mb-4">Nouvelle Catégorie</h3>
-                    <input type="text" id="new-cat-name" placeholder="Nom de la catégorie (ex: Véhicules, Sacs, Réserve)..." class="w-full px-4 py-2.5 bg-gray-700 text-white border border-gray-600 rounded-xl text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-croixrouge-500">
-                    <div class="flex justify-end space-x-2">
-                        <button onclick="app.closeModal()" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-xl text-sm font-medium">Annuler</button>
-                        <button onclick="app.saveCategory()" class="px-4 py-2 bg-croixrouge-600 hover:bg-croixrouge-700 text-white rounded-xl text-sm font-medium">Créer</button>
-                    </div>
-                `);
-            }
-
-            saveCategory() {
-                const name = document.getElementById('new-cat-name').value.trim();
-                if (!name) return;
-                const id = 'cat_' + Date.now();
-                this.data.categories.push({ id, name, lots: [] });
-                this.saveData();
+        verifyAdminPassword(event) {
+            event.preventDefault();
+            const pwd = document.getElementById('admin-pwd-input').value;
+            if (pwd === "croixrouge10") {
+                this.isAdmin = true;
                 this.closeModal();
+                this.showNotification("Mode Admin activé avec succès !", "success");
                 this.render();
-                this.showNotification(`Catégorie "${name}" créée avec succès !`);
-            }
-
-            deleteCategory(catId) {
-                if (!this.isAdmin) return;
-                if (confirm("Voulez-vous vraiment supprimer cette catégorie et tous ses lots ?")) {
-                    this.data.categories = this.data.categories.filter(c => c.id !== catId);
-                    this.saveData();
-                    this.render();
-                    this.showNotification("Catégorie supprimée.", "info");
-                }
-            }
-
-            // Lots
-            openAddLotModal() {
-                this.openModal(`
-                    <h3 class="text-lg font-bold text-white mb-4">Nouveau Lot</h3>
-                    <input type="text" id="new-lot-name" placeholder="Nom du lot (ex: Lot B, VSAV 1, Réserve)..." class="w-full px-4 py-2.5 bg-gray-700 text-white border border-gray-600 rounded-xl text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-croixrouge-500">
-                    <div class="flex justify-end space-x-2">
-                        <button onclick="app.closeModal()" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-xl text-sm font-medium">Annuler</button>
-                        <button onclick="app.saveLot()" class="px-4 py-2 bg-croixrouge-600 hover:bg-croixrouge-700 text-white rounded-xl text-sm font-medium">Créer</button>
-                    </div>
-                `);
-            }
-
-            saveLot() {
-                const name = document.getElementById('new-lot-name').value.trim();
-                if (!name) return;
-                const cat = this.data.categories.find(c => c.id === this.selectedCatId);
-                if (!cat) return;
-                if (!cat.lots) cat.lots = [];
-                const id = 'lot_' + Date.now();
-                cat.lots.push({ id, name, articles: [] });
-                this.saveData();
-                this.closeModal();
-                this.render();
-                this.showNotification(`Lot "${name}" créé avec succès !`);
-            }
-
-            deleteLot(lotId) {
-                if (!this.isAdmin) return;
-                if (confirm("Voulez-vous vraiment supprimer ce lot et ses articles ?")) {
-                    const cat = this.data.categories.find(c => c.id === this.selectedCatId);
-                    if (cat) {
-                        cat.lots = cat.lots.filter(l => l.id !== lotId);
-                        this.saveData();
-                        this.render();
-                        this.showNotification("Lot supprimé.", "info");
-                    }
-                }
-            }
-
-            // Articles
-            openAddArticleModal() {
-                this.openModal(`
-                    <h3 class="text-lg font-bold text-white mb-4">Ajouter un article</h3>
-                    <div class="space-y-3 mb-4">
-                        <div>
-                            <label class="block text-xs text-gray-400 mb-1">Nom de l'article</label>
-                            <input type="text" id="art-name" placeholder="Ex: Compresses stériles 10x10" class="w-full px-4 py-2 bg-gray-700 text-white border border-gray-600 rounded-xl text-sm">
-                        </div>
-                        <div class="grid grid-cols-2 gap-2">
-                            <div>
-                                <label class="block text-xs text-gray-400 mb-1">Qté Actuelle</label>
-                                <input type="number" id="art-current" value="1" min="0" class="w-full px-4 py-2 bg-gray-700 text-white border border-gray-600 rounded-xl text-sm">
-                            </div>
-                            <div>
-                                <label class="block text-xs text-gray-400 mb-1">Qté Théorique (Cible)</label>
-                                <input type="number" id="art-target" value="1" min="1" class="w-full px-4 py-2 bg-gray-700 text-white border border-gray-600 rounded-xl text-sm">
-                            </div>
-                        </div>
-                        <div>
-                            <label class="block text-xs text-gray-400 mb-1">Date de péremption (Optionnelle)</label>
-                            <input type="date" id="art-expiry" class="w-full px-4 py-2 bg-gray-700 text-white border border-gray-600 rounded-xl text-sm">
-                        </div>
-                    </div>
-                    <div class="flex justify-end space-x-2">
-                        <button onclick="app.closeModal()" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-xl text-sm font-medium">Annuler</button>
-                        <button onclick="app.saveArticle()" class="px-4 py-2 bg-croixrouge-600 hover:bg-croixrouge-700 text-white rounded-xl text-sm font-medium">Ajouter</button>
-                    </div>
-                `);
-            }
-
-            saveArticle() {
-                const name = document.getElementById('art-name').value.trim();
-                const currentQty = parseInt(document.getElementById('art-current').value) || 0;
-                const targetQty = parseInt(document.getElementById('art-target').value) || 1;
-                const expiryDate = document.getElementById('art-expiry').value;
-
-                if (!name) return;
-
-                const cat = this.data.categories.find(c => c.id === this.selectedCatId);
-                const lot = cat ? cat.lots.find(l => l.id === this.selectedLotId) : null;
-                if (!lot) return;
-
-                if (!lot.articles) lot.articles = [];
-                lot.articles.push({
-                    id: 'art_' + Date.now(),
-                    name,
-                    currentQty,
-                    targetQty,
-                    expiryDate: expiryDate || null
-                });
-
-                this.saveData();
-                this.closeModal();
-                this.render();
-                this.showNotification(`Article "${name}" ajouté !`);
-            }
-
-            openEditArticleModal(articleId) {
-                const cat = this.data.categories.find(c => c.id === this.selectedCatId);
-                const lot = cat ? cat.lots.find(l => l.id === this.selectedLotId) : null;
-                const art = lot ? lot.articles.find(a => a.id === articleId) : null;
-                if (!art) return;
-
-                this.openModal(`
-                    <h3 class="text-lg font-bold text-white mb-4">Modifier l'article</h3>
-                    <div class="space-y-3 mb-4">
-                        <div>
-                            <label class="block text-xs text-gray-400 mb-1">Nom de l'article</label>
-                            <input type="text" id="edit-art-name" value="${art.name}" class="w-full px-4 py-2 bg-gray-700 text-white border border-gray-600 rounded-xl text-sm">
-                        </div>
-                        <div class="grid grid-cols-2 gap-2">
-                            <div>
-                                <label class="block text-xs text-gray-400 mb-1">Qté Actuelle</label>
-                                <input type="number" id="edit-art-current" value="${art.currentQty}" min="0" class="w-full px-4 py-2 bg-gray-700 text-white border border-gray-600 rounded-xl text-sm">
-                            </div>
-                            <div>
-                                <label class="block text-xs text-gray-400 mb-1">Qté Théorique (Cible)</label>
-                                <input type="number" id="edit-art-target" value="${art.targetQty}" min="1" class="w-full px-4 py-2 bg-gray-700 text-white border border-gray-600 rounded-xl text-sm">
-                            </div>
-                        </div>
-                        <div>
-                            <label class="block text-xs text-gray-400 mb-1">Date de péremption</label>
-                            <input type="date" id="edit-art-expiry" value="${art.expiryDate || ''}" class="w-full px-4 py-2 bg-gray-700 text-white border border-gray-600 rounded-xl text-sm">
-                        </div>
-                    </div>
-                    <div class="flex justify-end space-x-2">
-                        <button onclick="app.closeModal()" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-xl text-sm font-medium">Annuler</button>
-                        <button onclick="app.updateArticle('${art.id}')" class="px-4 py-2 bg-croixrouge-600 hover:bg-croixrouge-700 text-white rounded-xl text-sm font-medium">Enregistrer</button>
-                    </div>
-                `);
-            }
-
-            updateArticle(articleId) {
-                const cat = this.data.categories.find(c => c.id === this.selectedCatId);
-                const lot = cat ? cat.lots.find(l => l.id === this.selectedLotId) : null;
-                const art = lot ? lot.articles.find(a => a.id === articleId) : null;
-                if (!art) return;
-
-                art.name = document.getElementById('edit-art-name').value.trim() || art.name;
-                art.currentQty = parseInt(document.getElementById('edit-art-current').value) ?? art.currentQty;
-                art.targetQty = parseInt(document.getElementById('edit-art-target').value) ?? art.targetQty;
-                art.expiryDate = document.getElementById('edit-art-expiry').value || null;
-
-                this.saveData();
-                this.closeModal();
-                this.render();
-                this.showNotification("Article mis à jour avec succès !");
-            }
-
-            deleteArticle(articleId) {
-                if (!this.isAdmin) return;
-                if (confirm("Supprimer cet article ?")) {
-                    const cat = this.data.categories.find(c => c.id === this.selectedCatId);
-                    const lot = cat ? cat.lots.find(l => l.id === this.selectedLotId) : null;
-                    if (lot && lot.articles) {
-                        lot.articles = lot.articles.filter(a => a.id !== articleId);
-                        this.saveData();
-                        this.render();
-                        this.showNotification("Article supprimé.", "info");
-                    }
-                }
-            }
-
-            // Saisie Massive / Export
-            openMassiveInputModal() {
-                this.openModal(`
-                    <h3 class="text-lg font-bold text-white mb-2">⚡ Saisie / Import Rapide (JSON)</h3>
-                    <p class="text-xs text-gray-400 mb-3">Collez ou mettez à jour la structure complète des données JSON pour importer plusieurs lots en une seule fois.</p>
-                    <textarea id="massive-json-input" rows="8" class="w-full px-3 py-2 bg-gray-900 text-gray-200 border border-gray-600 rounded-xl text-xs font-mono mb-4 focus:outline-none focus:ring-2 focus:ring-croixrouge-500">${JSON.stringify(this.data, null, 2)}</textarea>
-                    <div class="flex justify-end space-x-2">
-                        <button onclick="app.closeModal()" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-xl text-sm font-medium">Annuler</button>
-                        <button onclick="app.processMassiveInput()" class="px-4 py-2 bg-croixrouge-600 hover:bg-croixrouge-700 text-white rounded-xl text-sm font-medium">Importer</button>
-                    </div>
-                `);
-            }
-
-            processMassiveInput() {
-                try {
-                    const raw = document.getElementById('massive-json-input').value;
-                    const parsed = JSON.parse(raw);
-                    if (parsed && parsed.categories) {
-                        this.data = parsed;
-                        this.saveData();
-                        this.closeModal();
-                        this.render();
-                        this.showNotification("Import massif réussi !", "success");
-                    } else {
-                        alert("Format JSON invalide : clé 'categories' manquante.");
-                    }
-                } catch (e) {
-                    alert("Erreur de syntaxe JSON : " + e.message);
-                }
-            }
-
-            exportData() {
-                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(this.data, null, 2));
-                const downloadAnchor = document.createElement('a');
-                downloadAnchor.setAttribute("href", dataStr);
-                downloadAnchor.setAttribute("download", `croix_rouge_stock_${new Date().toISOString().slice(0,10)}.json`);
-                document.body.appendChild(downloadAnchor);
-                downloadAnchor.click();
-                downloadAnchor.remove();
-                this.showNotification("Sauvegarde JSON exportée avec succès !", "success");
+            } else {
+                this.showNotification("Mot de passe incorrect.", "error");
             }
         }
 
-        // Initialisation de l'application
-        const app = new LogisticsApp();
+        updateAdminUI() {
+            const btn = document.getElementById('admin-toggle-btn');
+            const toolsFooter = document.getElementById('admin-tools-footer');
+            if (btn) {
+                if (this.isAdmin) {
+                    btn.innerHTML = `<span>🔓 Admin (Actif)</span>`;
+                    btn.classList.add('bg-croixrouge-600', 'text-white');
+                    btn.classList.remove('bg-gray-700', 'text-gray-200');
+                } else {
+                    btn.innerHTML = `<span>🔒 Admin</span>`;
+                    btn.classList.remove('bg-croixrouge-600', 'text-white');
+                    btn.classList.add('bg-gray-700', 'text-gray-200');
+                }
+            }
+            if (toolsFooter) {
+                if (this.isAdmin) {
+                    toolsFooter.classList.remove('hidden');
+                } else {
+                    toolsFooter.classList.add('hidden');
+                }
+            }
+        }
+
+        openAddCategoryModal() {
+            this.openModal(`
+                <h3 class="text-xl font-bold mb-4 text-white">Ajouter une Nouvelle Catégorie</h3>
+                <form onsubmit="app.saveNewCategory(event)">
+                    <input type="text" id="new-cat-name" placeholder="Nom de la catégorie..." class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2.5 text-white mb-4 text-sm focus:outline-none focus:ring-2 focus:ring-croixrouge-500" required autofocus>
+                    <div class="flex justify-end space-x-2">
+                        <button type="button" onclick="app.closeModal()" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-xl text-sm font-medium">Annuler</button>
+                        <button type="submit" class="px-4 py-2 bg-croixrouge-600 hover:bg-croixrouge-700 rounded-xl text-sm font-medium">Créer</button>
+                    </div>
+                </form>
+            `);
+        }
+
+        saveNewCategory(event) {
+            event.preventDefault();
+            const name = document.getElementById('new-cat-name').value.trim();
+            if (!name) return;
+
+            const newId = 'cat_' + Date.now();
+            this.data.categories.push({ id: newId, name: name, lots: [] });
+            this.saveData();
+            this.closeModal();
+            this.render();
+            this.showNotification("Catégorie créée avec succès !", "success");
+        }
+
+        deleteCategory(catId) {
+            if (!this.isAdmin) return;
+            if (confirm("Voulez-vous vraiment supprimer cette catégorie et tout son contenu ?")) {
+                this.data.categories = this.data.categories.filter(c => c.id !== catId);
+                this.saveData();
+                this.render();
+                this.showNotification("Catégorie supprimée.", "info");
+            }
+        }
+
+        openAddLotModal() {
+            this.openModal(`
+                <h3 class="text-xl font-bold mb-4 text-white">Ajouter un Nouveau Lot</h3>
+                <form onsubmit="app.saveNewLot(event)">
+                    <input type="text" id="new-lot-name" placeholder="Nom du lot..." class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2.5 text-white mb-4 text-sm focus:outline-none focus:ring-2 focus:ring-croixrouge-500" required autofocus>
+                    <div class="flex justify-end space-x-2">
+                        <button type="button" onclick="app.closeModal()" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-xl text-sm font-medium">Annuler</button>
+                        <button type="submit" class="px-4 py-2 bg-croixrouge-600 hover:bg-croixrouge-700 rounded-xl text-sm font-medium">Créer le lot</button>
+                    </div>
+                </form>
+            `);
+        }
+
+        saveNewLot(event) {
+            event.preventDefault();
+            const name = document.getElementById('new-lot-name').value.trim();
+            if (!name) return;
+
+            const cat = this.data.categories.find(c => c.id === this.selectedCatId);
+            if (!cat) return;
+
+            if (!cat.lots) cat.lots = [];
+            cat.lots.push({ id: 'lot_' + Date.now(), name: name, articles: [] });
+            this.saveData();
+            this.closeModal();
+            this.render();
+            this.showNotification("Lot créé avec succès !", "success");
+        }
+
+        deleteLot(lotId) {
+            if (!this.isAdmin) return;
+            if (confirm("Voulez-vous vraiment supprimer ce lot ?")) {
+                const cat = this.data.categories.find(c => c.id === this.selectedCatId);
+                if (cat) {
+                    cat.lots = cat.lots.filter(l => l.id !== lotId);
+                    this.saveData();
+                    this.render();
+                    this.showNotification("Lot supprimé.", "info");
+                }
+            }
+        }
+
+        openAddArticleModal() {
+            this.openModal(`
+                <h3 class="text-xl font-bold mb-4 text-white">Ajouter un Article</h3>
+                <form onsubmit="app.saveNewArticle(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-1">Nom de l'article</label>
+                        <input type="text" id="art-name" placeholder="ex: Compresse stérile" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-croixrouge-500" required autofocus>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-1">Stock Actuel</label>
+                            <input type="number" id="art-current" value="10" min="0" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-croixrouge-500" required>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-1">Stock Théorique</label>
+                            <input type="number" id="art-target" value="10" min="0" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-croixrouge-500" required>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-1">Date de péremption (Optionnel)</label>
+                        <input type="date" id="art-expiry" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-croixrouge-500">
+                    </div>
+                    <div class="flex justify-end space-x-2 pt-2">
+                        <button type="button" onclick="app.closeModal()" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-xl text-sm font-medium">Annuler</button>
+                        <button type="submit" class="px-4 py-2 bg-croixrouge-600 hover:bg-croixrouge-700 rounded-xl text-sm font-medium">Ajouter</button>
+                    </div>
+                </form>
+            `);
+        }
+
+        saveNewArticle(event) {
+            event.preventDefault();
+            const name = document.getElementById('art-name').value.trim();
+            const currentQty = parseInt(document.getElementById('art-current').value) || 0;
+            const targetQty = parseInt(document.getElementById('art-target').value) || 0;
+            const expiryDate = document.getElementById('art-expiry').value;
+
+            const cat = this.data.categories.find(c => c.id === this.selectedCatId);
+            const lot = cat ? cat.lots.find(l => l.id === this.selectedLotId) : null;
+            if (!lot) return;
+
+            if (!lot.articles) lot.articles = [];
+            lot.articles.push({
+                id: 'art_' + Date.now(),
+                name: name,
+                currentQty: currentQty,
+                targetQty: targetQty,
+                expiryDate: expiryDate
+            });
+
+            this.saveData();
+            this.closeModal();
+            this.renderArticles();
+            this.showNotification("Article ajouté avec succès !", "success");
+        }
+
+        openEditArticleModal(artId) {
+            const cat = this.data.categories.find(c => c.id === this.selectedCatId);
+            const lot = cat ? cat.lots.find(l => l.id === this.selectedLotId) : null;
+            const art = lot ? lot.articles.find(a => a.id === artId) : null;
+            if (!art) return;
+
+            this.openModal(`
+                <h3 class="text-xl font-bold mb-4 text-white">Modifier l'Article</h3>
+                <form onsubmit="app.saveEditArticle(event, '${artId}')" class="space-y-4">
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-1">Nom de l'article</label>
+                        <input type="text" id="edit-art-name" value="${art.name}" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-croixrouge-500" required autofocus>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-1">Stock Actuel</label>
+                            <input type="number" id="edit-art-current" value="${art.currentQty}" min="0" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-croixrouge-500" required>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-1">Stock Théorique</label>
+                            <input type="number" id="edit-art-target" value="${art.targetQty}" min="0" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-croixrouge-500" required>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-1">Date de péremption</label>
+                        <input type="date" id="edit-art-expiry" value="${art.expiryDate || ''}" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-croixrouge-500">
+                    </div>
+                    <div class="flex justify-end space-x-2 pt-2">
+                        <button type="button" onclick="app.closeModal()" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-xl text-sm font-medium">Annuler</button>
+                        <button type="submit" class="px-4 py-2 bg-croixrouge-600 hover:bg-croixrouge-700 rounded-xl text-sm font-medium">Enregistrer</button>
+                    </div>
+                </form>
+            `);
+        }
+
+        saveEditArticle(event, artId) {
+            event.preventDefault();
+            const cat = this.data.categories.find(c => c.id === this.selectedCatId);
+            const lot = cat ? cat.lots.find(l => l.id === this.selectedLotId) : null;
+            const art = lot ? lot.articles.find(a => a.id === artId) : null;
+            if (!art) return;
+
+            art.name = document.getElementById('edit-art-name').value.trim();
+            art.currentQty = parseInt(document.getElementById('edit-art-current').value) || 0;
+            art.targetQty = parseInt(document.getElementById('edit-art-target').value) || 0;
+            art.expiryDate = document.getElementById('edit-art-expiry').value;
+
+            this.saveData();
+            this.closeModal();
+            this.renderArticles();
+            this.showNotification("Article modifié avec succès !", "success");
+        }
+
+        deleteArticle(artId) {
+            if (!this.isAdmin) return;
+            if (confirm("Voulez-vous vraiment supprimer cet article ?")) {
+                const cat = this.data.categories.find(c => c.id === this.selectedCatId);
+                const lot = cat ? cat.lots.find(l => l.id === this.selectedLotId) : null;
+                if (lot) {
+                    lot.articles = lot.articles.filter(a => a.id !== artId);
+                    this.saveData();
+                    this.renderArticles();
+                    this.showNotification("Article supprimé.", "info");
+                }
+            }
+        }
+
+        exportData() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(this.data, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", "croix_rouge_inventaire_backup.json");
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+            this.showNotification("Sauvegarde JSON exportée avec succès !", "success");
+        }
+
+        openModal(htmlContent) {
+            const container = document.getElementById('modal-container');
+            const box = document.getElementById('modal-box');
+            box.innerHTML = htmlContent;
+            container.classList.remove('hidden');
+        }
+
+        closeModal() {
+            document.getElementById('modal-container').classList.add('hidden');
+        }
+
+        showNotification(message, type = 'success') {
+            const banner = document.getElementById('notification-banner');
+            if (!banner) return;
+            banner.innerText = message;
+            banner.className = `mb-6 p-4 rounded-xl text-sm font-medium shadow-sm transition ${
+                type === 'success' ? 'bg-emerald-900/50 text-emerald-300 border border-emerald-700/50' :
+                type === 'error' ? 'bg-red-900/50 text-red-300 border border-red-700/50' :
+                'bg-indigo-900/50 text-indigo-300 border border-indigo-700/50'
+            }`;
+            banner.classList.remove('hidden');
+            setTimeout(() => {
+                banner.classList.add('hidden');
+            }, 3500);
+        }
+    }
+
+    const app = new LogisticsApp();
     </script>
 </body>
 </html>
