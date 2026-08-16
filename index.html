@@ -27,7 +27,6 @@
         .mode-normal { background: #333; color: #aaa; }
         .mode-admin { background: #1b5e20; color: #81c784; }
 
-        /* Tableaux par défaut (Ordi / Grand écran) */
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th, td { padding: 10px 8px; text-align: left; border-bottom: 1px solid var(--cr-border); font-size: 0.85rem; }
         th { background: #181818; color: #aaa; text-transform: uppercase; font-size: 0.7rem; }
@@ -55,12 +54,10 @@
         .checkbox-container { display: flex; align-items: center; gap: 6px; background: #181818; padding: 8px 10px; border: 1px solid var(--cr-border); border-radius: 4px; cursor: pointer; color: #ccc; font-size: 0.8rem; width: 100%; }
         .checkbox-container input { cursor: pointer; width: 16px; height: 16px; }
 
-        /* Modal QR Code */
         #qrcode-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); justify-content: center; align-items: center; z-index: 1000; padding: 15px; }
         .modal-content { background: var(--cr-panel-bg); padding: 20px; border-radius: 8px; text-align: center; border: 1px solid var(--cr-border); max-width: 350px; width: 100%; }
         #qrcode-container { background: white; padding: 15px; display: inline-block; border-radius: 6px; margin: 15px 0; }
 
-        /* --- MODE RESPONSIVE / MOBILE (Affichage vertical en cartes) --- */
         @media screen and (max-width: 768px) {
             body { padding: 8px; }
             header { flex-direction: column; align-items: flex-start; }
@@ -70,21 +67,11 @@
             thead { display: none; }
             
             #containers-table tr, #items-table tr {
-                background: #161616;
-                border: 1px solid var(--cr-border);
-                border-radius: 6px;
-                margin-bottom: 12px;
-                padding: 12px;
+                background: #161616; border: 1px solid var(--cr-border); border-radius: 6px; margin-bottom: 12px; padding: 12px;
             }
 
             #containers-table td, #items-table td {
-                border: none;
-                padding: 5px 0;
-                text-align: left;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                font-size: 0.9rem;
+                border: none; padding: 5px 0; text-align: left; display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem;
             }
 
             #containers-table td:nth-child(1):before { content: "Lot :"; color: #888; font-size: 0.8rem; font-weight: bold; }
@@ -92,26 +79,14 @@
             #containers-table td:nth-child(3):before { content: "Péremption :"; color: #888; font-size: 0.8rem; font-weight: bold; }
             #containers-table td:nth-child(4):before { content: "Validation :"; color: #888; font-size: 0.8rem; font-weight: bold; }
             #containers-table td:nth-child(5) {
-                border-top: 1px solid #2a2a2a;
-                margin-top: 8px;
-                padding-top: 10px;
-                display: flex;
-                flex-wrap: wrap;
-                gap: 5px;
-                justify-content: flex-end;
+                border-top: 1px solid #2a2a2a; margin-top: 8px; padding-top: 10px; display: flex; flex-wrap: wrap; gap: 5px; justify-content: flex-end;
             }
 
             #items-table td:nth-child(1):before { content: "Article :"; color: #888; font-size: 0.8rem; font-weight: bold; }
             #items-table td:nth-child(2):before { content: "Quantité :"; color: #888; font-size: 0.8rem; font-weight: bold; }
             #items-table td:nth-child(3):before { content: "Péremption :"; color: #888; font-size: 0.8rem; font-weight: bold; }
             #items-table td:nth-child(4) {
-                border-top: 1px solid #2a2a2a;
-                margin-top: 8px;
-                padding-top: 10px;
-                display: flex;
-                flex-wrap: wrap;
-                gap: 5px;
-                justify-content: flex-end;
+                border-top: 1px solid #2a2a2a; margin-top: 8px; padding-top: 10px; display: flex; flex-wrap: wrap; gap: 5px; justify-content: flex-end;
             }
 
             .form-inline { flex-direction: column; }
@@ -134,7 +109,6 @@
     </div>
 </header>
 
-<!-- Panneau d'ajout de lot (Visible uniquement en Admin) -->
 <div id="add-lot-panel" class="panel" style="display: none;">
     <h3>Ajouter un Lot / Conteneur</h3>
     <div class="form-inline">
@@ -160,11 +134,9 @@
     </table>
 </div>
 
-<!-- Panneau de gestion des articles -->
 <div id="items-panel" class="panel" style="display: none;">
     <h3 id="items-title" style="font-size: 1.1rem; margin-bottom: 10px;">Articles dans le lot</h3>
     
-    <!-- Formulaire d'ajout d'article (Visible uniquement en Admin) -->
     <div id="add-item-form" class="form-inline" style="background: #151515; padding: 10px; border-radius: 6px; border: 1px dashed var(--cr-border); display: none;">
         <input type="text" id="item-name" placeholder="Nom de l'article">
         <input type="number" id="item-qty" placeholder="Qté" min="1" value="1">
@@ -185,7 +157,6 @@
     <button class="btn btn-secondary" onclick="closeItems()" style="margin-top: 15px; width: 100%;">Fermer la gestion du lot</button>
 </div>
 
-<!-- Modal QR Code -->
 <div id="qrcode-modal">
     <div class="modal-content">
         <h3 id="qr-modal-title" style="margin-bottom: 10px; color: #fff; font-size: 1.1rem;">QR Code du lot</h3>
@@ -198,41 +169,47 @@
 </div>
 
 <script>
-    const NPOINT_URL = "https://api.npoint.io/f263cbbdd86c79f9ef1f";
+    const NPOINT_URL = "https://api.npoint.io/90d426901c1a2e90788a";
 
     let data = [];
     let currentContainerId = null;
     let isAdmin = false;
     let currentAdminPassword = localStorage.getItem('cr_admin_pwd') || "1234";
 
-    // Chargement initial des données depuis NPoint
     async function loadData() {
+        const localCache = JSON.parse(localStorage.getItem('cr_data_github') || '[]');
+        
         try {
             const response = await fetch(NPOINT_URL);
             if (response.ok) {
-                data = await response.json();
+                const serverData = await response.json();
+                if (serverData && serverData.length > 0) {
+                    data = serverData;
+                    localStorage.setItem('cr_data_github', JSON.stringify(data));
+                } else if (localCache.length > 0) {
+                    data = localCache;
+                    await saveToStorage();
+                } else {
+                    data = [];
+                }
             } else {
-                throw new Error("Erreur de chargement réseau");
+                data = localCache;
             }
         } catch (e) {
-            console.warn("Impossible de charger depuis le serveur, utilisation du cache local.", e);
-            let defaultData = [];
-            data = JSON.parse(localStorage.getItem('cr_data_github') || JSON.stringify(defaultData));
+            console.warn("Mode hors-ligne ou erreur réseau, utilisation du cache local.", e);
+            data = localCache;
         }
         renderContainers();
     }
 
-    // Sauvegarde locale + synchronisation cloud NPoint
     async function saveToStorage() {
         localStorage.setItem('cr_data_github', JSON.stringify(data));
         renderContainers();
         
         try {
             await fetch(NPOINT_URL, {
-                method: 'PUT', // ou POST selon la configuration npoint, PUT remplace tout le contenu
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data)
             });
         } catch (e) {
@@ -240,7 +217,6 @@
         }
     }
 
-    // Charger les données dès l'ouverture de la page
     loadData();
 
     function toggleAdminMode() {
@@ -318,14 +294,10 @@
 
     function parseExpiryDate(expiryStr) {
         if (!expiryStr) return null;
-        if (expiryStr.includes('-')) {
-            return new Date(expiryStr + 'T00:00:00');
-        }
+        if (expiryStr.includes('-')) return new Date(expiryStr + 'T00:00:00');
         if (expiryStr.includes('/')) {
             const parts = expiryStr.split('/');
-            if (parts.length === 3) {
-                return new Date(`${parts[2]}-${parts[1]}-${parts[0]}T00:00:00`);
-            }
+            if (parts.length === 3) return new Date(`${parts[2]}-${parts[1]}-${parts[0]}T00:00:00`);
         }
         return new Date(expiryStr);
     }
@@ -357,7 +329,6 @@
 
         tbody.innerHTML = data.map(c => {
             const status = getLotStatus(c.items);
-            
             let adminActions = '';
             let qrCodeBtn = `<button class="btn btn-small btn-secondary" onclick="showQRCode(${c.id})">QR Code</button>`;
             
@@ -382,6 +353,58 @@
                     <button class="btn btn-small" onclick="viewItems(${c.id})">Articles</button>
                     ${adminActions}
                 </td>
+            </tr>`;
+        }).join('');
+    }
+
+    function renderItems() {
+        const c = data.find(x => x.id === currentContainerId);
+        const tbody = document.getElementById('items-body');
+        if (!c || !tbody) return;
+
+        if (!c.items || c.items.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;">Aucun article dans ce lot.</td></tr>`;
+            return;
+        }
+
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+
+        tbody.innerHTML = c.items.map((item, idx) => {
+            let expiryDisplay = '♾️ Sans péremption';
+            let isExpired = false;
+
+            if (!item.noExpiry && item.expiry) {
+                const expDate = parseExpiryDate(item.expiry);
+                if (expDate && !isNaN(expDate)) {
+                    const diffDays = Math.ceil((expDate - now) / (1000 * 60 * 60 * 24));
+                    if (diffDays < 0) {
+                        expiryDisplay = `Périmé le ${item.expiry}`;
+                        isExpired = true;
+                    } else if (diffDays <= 90) {
+                        expiryDisplay = `Expire le ${item.expiry} (Bientôt)`;
+                    } else {
+                        expiryDisplay = item.expiry;
+                    }
+                } else {
+                    expiryDisplay = item.expiry;
+                }
+            }
+
+            let adminItemActions = '';
+            if (isAdmin) {
+                adminItemActions = `
+                    <button class="btn btn-small btn-edit" onclick="editItemExpiry(${idx})">Date</button>
+                    <button class="btn btn-small btn-duplicate" onclick="duplicateItem(${idx})">Dupliquer</button>
+                    <button class="btn btn-small" style="background:#800;" onclick="deleteItem(${idx})">X</button>
+                `;
+            }
+
+            return `<tr class="${isExpired ? 'row-expired' : ''}">
+                <td><strong>${item.name}</strong></td>
+                <td>${item.qty}</td>
+                <td>${expiryDisplay}</td>
+                <td>${adminItemActions}</td>
             </tr>`;
         }).join('');
     }
@@ -468,6 +491,7 @@
 
         if (!name) { alert("Nom de l'article requis."); return; }
 
+        if (!c.items) c.items = [];
         c.items.push({
             name: name,
             qty: qty,
@@ -511,6 +535,18 @@
         renderItems();
     }
 
+    function deleteItem(idx) {
+        if (!isAdmin) return;
+        const c = data.find(x => x.id === currentContainerId);
+        if (!c || !c.items[idx]) return;
+
+        if (confirm("Supprimer cet article ?")) {
+            c.items.splice(idx, 1);
+            saveToStorage();
+            renderItems();
+        }
+    }
+
     let qrCodeInstance = null;
     function showQRCode(id) {
         const c = data.find(x => x.id === id);
@@ -521,7 +557,7 @@
         container.innerHTML = "";
 
         qrCodeInstance = new QRCode(container, {
-            text: window.location.href + "?lot=" + c.id,
+            text: window.location.href.split('?')[0] + "?lot=" + c.id,
             width: 200,
             height: 200
         });
