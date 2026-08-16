@@ -70,13 +70,21 @@
             this.binId = "6a81d9d1da38895dfeebb8b2";
             this.apiKey = "$2a$10$rvsRxq/Z7qxtzzobIJh3buDRx.5FOPWVBi.ubxnM4AXn.3eyig0Hq";
             
-            this.data = JSON.parse(localStorage.getItem('croix_rouge_data')) || { categories: [] };
+            // Données par défaut vides en attendant le chargement cloud
+            this.data = { categories: [] };
             this.isAdmin = false;
-            this.isCloudConnected = true; // Par défaut en ligne au démarrage
+            this.isCloudConnected = true;
             this.currentView = 'home';
             this.selectedCatId = null;
             this.selectedLotId = null;
             this.searchFilterText = '';
+
+            // Lancement du chargement initial depuis le cloud
+            this.initData();
+        }
+
+        async initData() {
+            await this.loadFromCloud();
             
             const urlParams = new URLSearchParams(window.location.search);
             const targetLot = urlParams.get('lot');
@@ -85,6 +93,35 @@
             }
 
             this.render();
+        }
+
+        async loadFromCloud() {
+            try {
+                const response = await fetch(`https://api.jsonbin.io/v3/b/${this.binId}/latest`, {
+                    headers: {
+                        'X-Master-Key': this.apiKey
+                    }
+                });
+                if (response.ok) {
+                    const resData = await response.json();
+                    if (resData && resData.record) {
+                        this.data = resData.record;
+                        localStorage.setItem('croix_rouge_data', JSON.stringify(this.data));
+                    }
+                } else {
+                    this.loadFallbackLocal();
+                }
+            } catch (err) {
+                console.warn("Impossible de joindre le cloud, utilisation du cache local.", err);
+                this.loadFallbackLocal();
+            }
+        }
+
+        loadFallbackLocal() {
+            const local = localStorage.getItem('croix_rouge_data');
+            if (local) {
+                this.data = JSON.parse(local);
+            }
         }
 
         findAndOpenLotById(lotId) {
@@ -104,7 +141,6 @@
         saveData() {
             localStorage.setItem('croix_rouge_data', JSON.stringify(this.data));
             
-            // Si le mode cloud est actif, on envoie la synchro (mais optimisé en arrière-plan)
             if (this.isCloudConnected) {
                 this.syncToCloudSilent();
             }
@@ -127,11 +163,9 @@
 
         toggleCloudMode() {
             if (this.isCloudConnected) {
-                // Passage en mode local / déconnecté
                 this.isCloudConnected = false;
                 this.showNotification("Déconnecté de JSONBin : modifications en local uniquement (0 requête).", "info");
             } else {
-                // Reconnexion : on envoie une requête globale unique de mise à jour
                 this.isCloudConnected = true;
                 this.syncToCloudGlobal();
             }
