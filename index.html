@@ -388,10 +388,12 @@
                 }
             }
 
-            let adminItemActions = '';
+            // Tout le monde peut modifier la date, seuls les admins peuvent supprimer/dupliquer
+            let itemActions = `
+                <button class="btn btn-small btn-edit" onclick="editItemExpiry(${idx})">Date</button>
+            `;
             if (isAdmin) {
-                adminItemActions = `
-                    <button class="btn btn-small btn-edit" onclick="editItemExpiry(${idx})">Date</button>
+                itemActions += `
                     <button class="btn btn-small btn-duplicate" onclick="duplicateItem(${idx})">Dupliquer</button>
                     <button class="btn btn-small" style="background:#800;" onclick="deleteItem(${idx})">X</button>
                 `;
@@ -401,7 +403,7 @@
                 <td><strong>${item.name}</strong></td>
                 <td>${item.qty}</td>
                 <td>${expiryDisplay}</td>
-                <td>${adminItemActions}</td>
+                <td>${itemActions}</td>
             </tr>`;
         }).join('');
     }
@@ -507,7 +509,6 @@
     }
 
     function editItemExpiry(idx) {
-        if (!isAdmin) return;
         const c = data.find(x => x.id === currentContainerId);
         if (!c || !c.items[idx]) return;
 
