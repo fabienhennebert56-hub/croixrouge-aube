@@ -198,164 +198,50 @@
 </div>
 
 <script>
-    // Chargement avec les 4 vrais lots extraits de ta base
-    let defaultData = [
-      {
-        "id": 1786816203847,
-        "name": "reserve (oxy+) 4",
-        "encoche": "",
-        "lastChecked": null,
-        "items": [
-          {"name": "tentiometre avec n/gd / s", "qty": 1, "expiry": null, "isElectronic": true},
-          {"name": "thermometre", "qty": 1, "expiry": null, "isElectronic": true},
-          {"name": "oxymetre de pouls", "qty": 1, "expiry": null, "isElectronic": true},
-          {"name": "pince a echardes", "qty": 1, "expiry": null, "isElectronic": true},
-          {"name": "pince a tique", "qty": 1, "expiry": null, "isElectronic": true},
-          {"name": "physiodose 5ML", "qty": 5, "expiry": "2027-05-30", "isElectronic": false},
-          {"name": "chlorherxidrine", "qty": 5, "expiry": "2026-11-30", "isElectronic": false},
-          {"name": "mouchoire", "qty": 1, "expiry": "2031-12-31", "isElectronic": false},
-          {"name": "compresse de gaze 7,5x 7,5", "qty": 20, "expiry": "2027-07-01", "isElectronic": false},
-          {"name": "physiodose 50ML", "qty": 1, "expiry": "2026-07-31", "isElectronic": false},
-          {"name": "bande extensible 10cm x 4m", "qty": 3, "expiry": "2028-12-01", "isElectronic": false},
-          {"name": "bande extensible 7cmx 4m", "qty": 1, "expiry": "2028-08-01", "isElectronic": false},
-          {"name": "ciseaux type jesco", "qty": 1, "expiry": null, "isElectronic": true, "noExpiry": true},
-          {"name": "sparadrap", "qty": 1, "expiry": null, "isElectronic": true, "noExpiry": true},
-          {"name": "boite de pansement", "qty": 1, "expiry": "2020-09-01", "isElectronic": false},
-          {"name": "sucre", "qty": 10, "expiry": null, "isElectronic": true, "noExpiry": true},
-          {"name": "gobelet", "qty": 2, "expiry": null, "isElectronic": true},
-          {"name": "bouteille d'eau", "qty": 1, "expiry": null, "isElectronic": true},
-          {"name": "compresse 5 x 5", "qty": 4, "expiry": "2025-09-30", "isElectronic": false},
-          {"name": "glucomètre et bandelettes", "qty": 1, "expiry": null, "isElectronic": true},
-          {"name": "autopiqueur", "qty": 10, "expiry": null, "isElectronic": true},
-          {"name": "couverture de survies", "qty": 8, "expiry": null, "isElectronic": true},
-          {"name": "vomix", "qty": 3, "expiry": null, "isElectronic": true},
-          {"name": "poches de froids", "qty": 3, "expiry": "2030-03-30", "isElectronic": false},
-          {"name": "poches de chaud", "qty": 3, "expiry": "2028-06-01", "isElectronic": false},
-          {"name": "foliodrape", "qty": 2, "expiry": "2028-04-01", "isElectronic": false},
-          {"name": "gant de manutention", "qty": 2, "expiry": null, "isElectronic": true},
-          {"name": "garrot", "qty": 1, "expiry": null, "isElectronic": true},
-          {"name": "pansement compressif d'urgence", "qty": 1, "expiry": "2032-01-01", "isElectronic": false},
-          {"name": "pansement thoracique", "qty": 1, "expiry": "2029-01-01", "isElectronic": false},
-          {"name": "lunettes de protection", "qty": 2, "expiry": null, "isElectronic": true},
-          {"name": "sac pour déchées", "qty": 3, "expiry": null, "isElectronic": true},
-          {"name": "sac rouges", "qty": 2, "expiry": null, "isElectronic": true},
-          {"name": "sac DASRI", "qty": 2, "expiry": null, "isElectronic": true},
-          {"name": "alèse", "qty": 1, "expiry": null, "isElectronic": true},
-          {"name": "drap usage unique", "qty": 2, "expiry": null, "isElectronic": true},
-          {"name": "gant taille XL/M/L", "qty": 1, "expiry": null, "isElectronic": true},
-          {"name": "rubalise rouge et blanc", "qty": 1, "expiry": null, "isElectronic": true}
-        ]
-      },
-      {
-        "id": 1786823394643,
-        "name": "reserve 3",
-        "encoche": "",
-        "items": [],
-        "lastChecked": null
-      },
-      {
-        "id": 1786876291313,
-        "name": "reserve (oxy+) 3",
-        "encoche": "",
-        "items": [
-          {"name": "tentiometre avec n/gd / s", "qty": 1, "expiry": null, "isElectronic": true},
-          {"name": "thermometre", "qty": 1, "expiry": null, "isElectronic": true},
-          {"name": "oxymetre de pouls", "qty": 1, "expiry": null, "isElectronic": true},
-          {"name": "pince a echardes", "qty": 1, "expiry": null, "isElectronic": true},
-          {"name": "pince a tique", "qty": 1, "expiry": null, "isElectronic": true},
-          {"name": "physiodose 5ML", "qty": 5, "expiry": "2027-05-30", "isElectronic": false},
-          {"name": "chlorherxidrine", "qty": 5, "expiry": "2026-11-30", "isElectronic": false},
-          {"name": "mouchoire", "qty": 1, "expiry": "2031-12-31", "isElectronic": false},
-          {"name": "compresse de gaze 7,5x 7,5", "qty": 20, "expiry": "2027-07-01", "isElectronic": false},
-          {"name": "physiodose 50ML", "qty": 1, "expiry": "2026-07-31", "isElectronic": false},
-          {"name": "bande extensible 10cm x 4m", "qty": 3, "expiry": "2028-12-01", "isElectronic": false},
-          {"name": "bande extensible 7cmx 4m", "qty": 1, "expiry": "2028-08-01", "isElectronic": false},
-          {"name": "ciseaux type jesco", "qty": 1, "expiry": null, "isElectronic": true, "noExpiry": true},
-          {"name": "sparadrap", "qty": 1, "expiry": null, "isElectronic": true, "noExpiry": true},
-          {"name": "boite de pansement", "qty": 1, "expiry": "2020-09-01", "isElectronic": false},
-          {"name": "sucre", "qty": 10, "expiry": null, "isElectronic": true, "noExpiry": true},
-          {"name": "gobelet", "qty": 2, "expiry": null, "isElectronic": true},
-          {"name": "bouteille d'eau", "qty": 1, "expiry": null, "isElectronic": true},
-          {"name": "compresse 5 x 5", "qty": 4, "expiry": "2025-09-30", "isElectronic": false},
-          {"name": "glucomètre et bandelettes", "qty": 1, "expiry": null, "isElectronic": true},
-          {"name": "autopiqueur", "qty": 10, "expiry": null, "isElectronic": true},
-          {"name": "couverture de survies", "qty": 8, "expiry": null, "isElectronic": true},
-          {"name": "vomix", "qty": 3, "expiry": null, "isElectronic": true},
-          {"name": "poches de froids", "qty": 3, "expiry": "2030-03-30", "isElectronic": false},
-          {"name": "poches de chaud", "qty": 3, "expiry": "2028-06-01", "isElectronic": false},
-          {"name": "foliodrape", "qty": 2, "expiry": "2028-04-01", "isElectronic": false},
-          {"name": "gant de manutention", "qty": 2, "expiry": null, "isElectronic": true},
-          {"name": "garrot", "qty": 1, "expiry": null, "isElectronic": true},
-          {"name": "pansement compressif d'urgence", "qty": 1, "expiry": "2032-01-01", "isElectronic": false},
-          {"name": "pansement thoracique", "qty": 1, "expiry": "2029-01-01", "isElectronic": false},
-          {"name": "lunettes de protection", "qty": 2, "expiry": null, "isElectronic": true},
-          {"name": "sac pour déchées", "qty": 3, "expiry": null, "isElectronic": true},
-          {"name": "sac rouges", "qty": 2, "expiry": null, "isElectronic": true},
-          {"name": "sac DASRI", "qty": 2, "expiry": null, "isElectronic": true},
-          {"name": "alèse", "qty": 1, "expiry": null, "isElectronic": true},
-          {"name": "drap usage unique", "qty": 2, "expiry": null, "isElectronic": true},
-          {"name": "gant taille XL/M/L", "qty": 1, "expiry": null, "isElectronic": true},
-          {"name": "rubalise rouge et blanc", "qty": 1, "expiry": null, "isElectronic": true}
-        ],
-        "lastChecked": null
-      },
-      {
-        "id": 1786881423009,
-        "name": "reserve (oxy+) 4 (Copie)",
-        "encoche": "",
-        "items": [
-          {"name": "tentiometre avec n/gd / s", "qty": 1, "expiry": null, "isElectronic": true},
-          {"name": "thermometre", "qty": 1, "expiry": null, "isElectronic": true},
-          {"name": "oxymetre de pouls", "qty": 1, "expiry": null, "isElectronic": true},
-          {"name": "pince a echardes", "qty": 1, "expiry": null, "isElectronic": true},
-          {"name": "pince a tique", "qty": 1, "expiry": null, "isElectronic": true},
-          {"name": "physiodose 5ML", "qty": 5, "expiry": "2027-05-30", "isElectronic": false},
-          {"name": "chlorherxidrine", "qty": 5, "expiry": "2026-11-30", "isElectronic": false},
-          {"name": "mouchoire", "qty": 1, "expiry": "2031-12-31", "isElectronic": false},
-          {"name": "compresse de gaze 7,5x 7,5", "qty": 20, "expiry": "2027-07-01", "isElectronic": false},
-          {"name": "physiodose 50ML", "qty": 1, "expiry": "2026-07-31", "isElectronic": false},
-          {"name": "bande extensible 10cm x 4m", "qty": 3, "expiry": "2028-12-01", "isElectronic": false},
-          {"name": "bande extensible 7cmx 4m", "qty": 1, "expiry": "2028-08-01", "isElectronic": false},
-          {"name": "ciseaux type jesco", "qty": 1, "expiry": null, "isElectronic": true, "noExpiry": true},
-          {"name": "sparadrap", "qty": 1, "expiry": null, "isElectronic": true, "noExpiry": true},
-          {"name": "boite de pansement", "qty": 1, "expiry": "2020-09-01", "isElectronic": false},
-          {"name": "sucre", "qty": 10, "expiry": null, "isElectronic": true, "noExpiry": true},
-          {"name": "gobelet", "qty": 2, "expiry": null, "isElectronic": true},
-          {"name": "bouteille d'eau", "qty": 1, "expiry": null, "isElectronic": true},
-          {"name": "compresse 5 x 5", "qty": 4, "expiry": "2025-09-30", "isElectronic": false},
-          {"name": "glucomètre et bandelettes", "qty": 1, "expiry": null, "isElectronic": true},
-          {"name": "autopiqueur", "qty": 10, "expiry": null, "isElectronic": true},
-          {"name": "couverture de survies", "qty": 8, "expiry": null, "isElectronic": true},
-          {"name": "vomix", "qty": 3, "expiry": null, "isElectronic": true},
-          {"name": "poches de froids", "qty": 3, "expiry": "2030-03-30", "isElectronic": false},
-          {"name": "poches de chaud", "qty": 3, "expiry": "2028-06-01", "isElectronic": false},
-          {"name": "foliodrape", "qty": 2, "expiry": "2028-04-01", "isElectronic": false},
-          {"name": "gant de manutention", "qty": 2, "expiry": null, "isElectronic": true},
-          {"name": "garrot", "qty": 1, "expiry": null, "isElectronic": true},
-          {"name": "pansement compressif d'urgence", "qty": 1, "expiry": "2032-01-01", "isElectronic": false},
-          {"name": "pansement thoracique", "qty": 1, "expiry": "2029-01-01", "isElectronic": false},
-          {"name": "lunettes de protection", "qty": 2, "expiry": null, "isElectronic": true},
-          {"name": "sac pour déchées", "qty": 3, "expiry": null, "isElectronic": true},
-          {"name": "sac rouges", "qty": 2, "expiry": null, "isElectronic": true},
-          {"name": "sac DASRI", "qty": 2, "expiry": null, "isElectronic": true},
-          {"name": "alèse", "qty": 1, "expiry": null, "isElectronic": true},
-          {"name": "drap usage unique", "qty": 2, "expiry": null, "isElectronic": true},
-          {"name": "gant taille XL/M/L", "qty": 1, "expiry": null, "isElectronic": true},
-          {"name": "rubalise rouge et blanc", "qty": 1, "expiry": null, "isElectronic": true}
-        ],
-        "lastChecked": null
-      }
-    ];
+    const NPOINT_URL = "https://api.npoint.io/f263cbbdd86c79f9ef1f";
 
-    let data = JSON.parse(localStorage.getItem('cr_data_github') || JSON.stringify(defaultData));
+    let data = [];
     let currentContainerId = null;
     let isAdmin = false;
     let currentAdminPassword = localStorage.getItem('cr_admin_pwd') || "1234";
 
-    function saveToStorage() {
-        localStorage.setItem('cr_data_github', JSON.stringify(data));
+    // Chargement initial des données depuis NPoint
+    async function loadData() {
+        try {
+            const response = await fetch(NPOINT_URL);
+            if (response.ok) {
+                data = await response.json();
+            } else {
+                throw new Error("Erreur de chargement réseau");
+            }
+        } catch (e) {
+            console.warn("Impossible de charger depuis le serveur, utilisation du cache local.", e);
+            let defaultData = [];
+            data = JSON.parse(localStorage.getItem('cr_data_github') || JSON.stringify(defaultData));
+        }
         renderContainers();
     }
+
+    // Sauvegarde locale + synchronisation cloud NPoint
+    async function saveToStorage() {
+        localStorage.setItem('cr_data_github', JSON.stringify(data));
+        renderContainers();
+        
+        try {
+            await fetch(NPOINT_URL, {
+                method: 'PUT', // ou POST selon la configuration npoint, PUT remplace tout le contenu
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+        } catch (e) {
+            console.error("Erreur lors de la synchronisation cloud :", e);
+        }
+    }
+
+    // Charger les données dès l'ouverture de la page
+    loadData();
 
     function toggleAdminMode() {
         if (!isAdmin) {
@@ -565,205 +451,98 @@
         document.getElementById('items-panel').scrollIntoView({ behavior: 'smooth' });
     }
 
-    function renderItems() {
-        const c = data.find(x => x.id === currentContainerId);
-        const tbody = document.getElementById('items-body');
-        
-        if (!c || !c.items || c.items.length === 0) { 
-            tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;">Vide.</td></tr>`; 
-            return; 
-        }
-
-        const now = new Date();
-        now.setHours(0, 0, 0, 0);
-
-        tbody.innerHTML = c.items.map((i, idx) => {
-            let expiryHtml = '';
-            let rowClass = '';
-
-            if (i.noExpiry || i.isElectronic) {
-                expiryHtml = '♾️ (sans péremption)';
-            } else {
-                const expDate = parseExpiryDate(i.expiry);
-                if (!expDate || isNaN(expDate)) {
-                    expiryHtml = i.expiry || '-';
-                } else {
-                    const diffDays = (expDate - now) / (1000 * 60 * 60 * 24);
-                    const formattedDate = expDate.toLocaleDateString('fr-FR');
-
-                    if (diffDays < 0) {
-                        expiryHtml = `${formattedDate} <span class="badge badge-alert" style="margin-left: 5px;">PÉRIMÉ !</span>`;
-                        rowClass = 'row-expired';
-                    } else if (diffDays < 90) {
-                        expiryHtml = `${formattedDate} <span class="badge badge-warn" style="margin-left: 5px;">À surveiller</span>`;
-                    } else {
-                        expiryHtml = `<span style="color: #81c784;">${formattedDate}</span>`;
-                    }
-                }
-            }
-
-            let actionButtons = `
-                <button class="btn btn-small btn-edit" onclick="editItemExpiry(${idx})">📅 Date</button>
-            `;
-            if (isAdmin) {
-                actionButtons += `
-                    <button class="btn btn-small btn-duplicate" onclick="duplicateItem(${idx})">Dupliquer</button>
-                    <button class="btn btn-small btn-edit" style="background:#1976d2;" onclick="editItemName(${idx})">Nom</button>
-                    <button class="btn btn-small" style="background:#800;" onclick="deleteItem(${idx})">X</button>
-                `;
-            }
-
-            return `<tr class="${rowClass}">
-                <td>${i.name}</td>
-                <td><strong>${i.qty}</strong></td>
-                <td>${expiryHtml}</td>
-                <td>${actionButtons}</td>
-            </tr>`;
-        }).join('');
+    function closeItems() {
+        currentContainerId = null;
+        document.getElementById('items-panel').style.display = 'none';
     }
 
     function addItemToCurrentLot() {
         if (!isAdmin) return;
+        const c = data.find(x => x.id === currentContainerId);
+        if (!c) return;
+
         const name = document.getElementById('item-name').value.trim();
-        const qty = parseInt(document.getElementById('item-qty').value);
+        const qty = parseInt(document.getElementById('item-qty').value) || 1;
         const noExpiry = document.getElementById('item-no-expiry').checked;
         const expiry = document.getElementById('item-expiry').value;
-        
-        if (!name || isNaN(qty) || (!noExpiry && !expiry)) { alert("Champs invalides."); return; }
-        
-        const c = data.find(x => x.id === currentContainerId);
-        c.items.push({ 
-            name, 
-            qty, 
-            expiry: noExpiry ? null : expiry, 
-            noExpiry,
-            isElectronic: noExpiry
+
+        if (!name) { alert("Nom de l'article requis."); return; }
+
+        c.items.push({
+            name: name,
+            qty: qty,
+            expiry: noExpiry ? null : (expiry || null),
+            noExpiry: noExpiry
         });
-        saveToStorage();
-        renderItems();
+
         document.getElementById('item-name').value = '';
         document.getElementById('item-qty').value = '1';
         document.getElementById('item-expiry').value = '';
+        document.getElementById('item-no-expiry').checked = false;
+        toggleNoExpiryField();
+
+        saveToStorage();
+        renderItems();
     }
 
     function editItemExpiry(idx) {
-        const c = data.find(x => x.id === currentContainerId);
-        const i = c.items[idx];
-        
-        const choice = prompt(`Modifier la péremption de "${i.name}" :\n1. Nouvelle date (AAAA-MM-JJ ou JJ/MM/AAAA)\n2. Taper "sans" pour (sans péremption)`, i.noExpiry ? "sans" : (i.expiry || ""));
-        
-        if (choice !== null) {
-            const val = choice.trim().toLowerCase();
-            if (val === "sans" || val === "e" || val === "elec") {
-                i.noExpiry = true;
-                i.isElectronic = true;
-                i.expiry = null;
-            } else if (val !== "") {
-                i.noExpiry = false;
-                i.isElectronic = false;
-                i.expiry = choice.trim();
-            }
-            saveToStorage();
-            renderItems();
-        }
-    }
-
-    function editItemName(idx) {
         if (!isAdmin) return;
         const c = data.find(x => x.id === currentContainerId);
-        const i = c.items[idx];
-        const n = prompt("Nouveau nom de l'article :", i.name);
-        if (n !== null && n.trim() !== "") { 
-            i.name = n.trim(); 
-            saveToStorage(); 
-            renderItems(); 
+        if (!c || !c.items[idx]) return;
+
+        const item = c.items[idx];
+        const newDate = prompt("Modifier la date de péremption (AAAA-MM-JJ) :", item.expiry || "");
+        if (newDate !== null) {
+            item.expiry = newDate.trim() || null;
+            if (newDate.trim() !== "") item.noExpiry = false;
+            saveToStorage();
+            renderItems();
         }
     }
 
     function duplicateItem(idx) {
         if (!isAdmin) return;
         const c = data.find(x => x.id === currentContainerId);
-        const itemToCopy = c.items[idx];
-        
-        let lotNames = data.map(l => l.name).join(', ');
-        let targetLotName = prompt(`Nom du lot cible pour dupliquer "${itemToCopy.name}" (laisser vide pour le même lot) :\n\nLots : ${lotNames}`, c.name);
-        
-        if (targetLotName !== null) {
-            let targetLot = data.find(l => l.name.toLowerCase() === targetLotName.trim().toLowerCase());
-            if (!targetLot) {
-                alert("Lot cible introuvable, duplication annulée.");
-                return;
-            }
-            targetLot.items.push(JSON.parse(JSON.stringify(itemToCopy)));
-            saveToStorage();
-            if (currentContainerId === targetLot.id) {
-                renderItems();
-            } else {
-                alert(`Article dupliqué dans : ${targetLot.name}`);
-            }
-        }
-    }
+        if (!c || !c.items[idx]) return;
 
-    function deleteItem(idx) {
-        if (!isAdmin) return;
-        const c = data.find(x => x.id === currentContainerId);
-        c.items.splice(idx, 1);
+        const itemToCopy = c.items[idx];
+        c.items.push(JSON.parse(JSON.stringify(itemToCopy)));
         saveToStorage();
         renderItems();
     }
 
+    let qrCodeInstance = null;
     function showQRCode(id) {
         const c = data.find(x => x.id === id);
         if (!c) return;
 
         document.getElementById('qr-modal-title').textContent = "QR Code : " + c.name;
-        
         const container = document.getElementById('qrcode-container');
         container.innerHTML = "";
 
-        let baseUrl = window.location.href.split('?')[0];
-        let qrData = `${baseUrl}?lot=${c.id}`;
-
-        new QRCode(container, {
-            text: qrData,
-            width: 180,
-            height: 180,
-            colorDark : "#000000",
-            colorLight : "#ffffff",
-            correctLevel : QRCode.CorrectLevel.H
+        qrCodeInstance = new QRCode(container, {
+            text: window.location.href + "?lot=" + c.id,
+            width: 200,
+            height: 200
         });
 
         document.getElementById('qrcode-modal').style.display = 'flex';
-    }
-
-    function downloadQRCode() {
-        const img = document.querySelector('#qrcode-container img');
-        if (!img) return;
-
-        const link = document.createElement('a');
-        link.href = img.src;
-        link.download = 'qrcode_lot.png';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
     }
 
     function closeQRCodeModal() {
         document.getElementById('qrcode-modal').style.display = 'none';
     }
 
-    function closeItems() { document.getElementById('items-panel').style.display = 'none'; }
-
-    window.onload = () => {
-        renderContainers();
-        const urlParams = new URLSearchParams(window.location.search);
-        const lotId = urlParams.get('lot');
-        if (lotId) {
-            setTimeout(() => {
-                viewItems(parseInt(lotId));
-            }, 100);
+    function downloadQRCode() {
+        const img = document.querySelector('#qrcode-container img');
+        if (img) {
+            const link = document.createElement('a');
+            link.href = img.src;
+            link.download = 'qrcode_lot.png';
+            link.click();
         }
-    };
+    }
 </script>
+
 </body>
 </html>
