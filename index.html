@@ -27,7 +27,7 @@
         .mode-normal { background: #333; color: #aaa; }
         .mode-admin { background: #1b5e20; color: #81c784; }
 
-        /* Tableaux par défaut */
+        /* Tableaux par défaut (Ordi / Grand écran) */
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th, td { padding: 10px 8px; text-align: left; border-bottom: 1px solid var(--cr-border); font-size: 0.85rem; }
         th { background: #181818; color: #aaa; text-transform: uppercase; font-size: 0.7rem; }
@@ -66,10 +66,8 @@
             header { flex-direction: column; align-items: flex-start; }
             .admin-status { width: 100%; justify-content: space-between; margin-top: 5px; }
 
-            /* Transformation des tableaux en blocs verticaux */
             table, thead, tbody, th, td, tr { display: block; }
-            
-            thead { display: none; } /* Cache les en-têtes de tableaux classiques */
+            thead { display: none; }
             
             #containers-table tr, #items-table tr {
                 background: #161616;
@@ -89,7 +87,6 @@
                 font-size: 0.9rem;
             }
 
-            /* Ajout d'étiquettes contextuelles en mode mobile via attributs data ou structure */
             #containers-table td:nth-child(1):before { content: "Lot :"; color: #888; font-size: 0.8rem; font-weight: bold; }
             #containers-table td:nth-child(2):before { content: "Encoche :"; color: #888; font-size: 0.8rem; font-weight: bold; }
             #containers-table td:nth-child(3):before { content: "Péremption :"; color: #888; font-size: 0.8rem; font-weight: bold; }
@@ -572,7 +569,9 @@
         const container = document.getElementById('qrcode-container');
         container.innerHTML = "";
 
-        let qrData = `Lot: ${c.name} | Encoche: ${c.encoche || 'N/A'} | ID: ${c.id}`;
+        // Génère un lien cliquable pointant vers l'application avec l'ID du lot
+        let baseUrl = window.location.href.split('?')[0];
+        let qrData = `${baseUrl}?lot=${c.id}`;
 
         new QRCode(container, {
             text: qrData,
@@ -603,7 +602,18 @@
     }
 
     function closeItems() { document.getElementById('items-panel').style.display = 'none'; }
-    window.onload = renderContainers;
+
+    // Ouvre automatiquement le lot si l'application est ouverte via un QR Code
+    window.onload = () => {
+        renderContainers();
+        const urlParams = new URLSearchParams(window.location.search);
+        const lotId = urlParams.get('lot');
+        if (lotId) {
+            setTimeout(() => {
+                viewItems(parseInt(lotId));
+            }, 100);
+        }
+    };
 </script>
 </body>
 </html>
