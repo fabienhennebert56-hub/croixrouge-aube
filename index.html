@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Logistique - Croix-Rouge (MOT)</title>
+    <!-- Inclusion de QRCode.js pour générer les QR codes -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         :root {
             --cr-red: #cc0000;
@@ -20,6 +22,11 @@
         header { border-bottom: 3px solid var(--cr-red); padding-bottom: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
         header h1 { color: #fff; font-size: 1.5rem; }
 
+        .admin-status { display: flex; align-items: center; gap: 10px; font-size: 0.85rem; flex-wrap: wrap; }
+        .badge-mode { padding: 4px 10px; border-radius: 12px; font-weight: bold; }
+        .mode-normal { background: #333; color: #aaa; }
+        .mode-admin { background: #1b5e20; color: #81c784; }
+
         table { width: 100%; border-collapse: collapse; margin-top: 15px; }
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--cr-border); font-size: 0.9rem; }
         th { background: #181818; color: #aaa; text-transform: uppercase; font-size: 0.75rem; }
@@ -31,6 +38,8 @@
         .btn-secondary { background: #333; color: #ccc; }
         .btn-edit { background: #1976d2; color: white; }
         .btn-duplicate { background: #00897b; color: white; }
+        .btn-admin { background: #e65100; color: white; }
+        .btn-pwd { background: #512da8; color: white; }
 
         .badge { padding: 4px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; display: inline-block; }
         .badge-ok { background: #1b5e20; color: #81c784; }
@@ -39,23 +48,33 @@
         .badge-secondary { background: #2a2a2a; color: #888; }
         
         .form-inline { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; align-items: center; }
-        input[type="text"], input[type="date"], input[type="number"] { padding: 8px; background: #121212; border: 1px solid var(--cr-border); color: #fff; border-radius: 4px; }
+        input[type="text"], input[type="date"], input[type="number"], input[type="password"] { padding: 8px; background: #121212; border: 1px solid var(--cr-border); color: #fff; border-radius: 4px; }
         input[type="text"] { flex: 2; min-width: 150px; }
         input[type="number"] { width: 80px; }
         input[type="date"] { flex: 1; min-width: 130px; }
         
         .checkbox-container { display: flex; align-items: center; gap: 6px; background: #181818; padding: 8px 12px; border: 1px solid var(--cr-border); border-radius: 4px; cursor: pointer; color: #ccc; font-size: 0.85rem; }
         .checkbox-container input { cursor: pointer; width: 16px; height: 16px; }
+
+        /* Modal QR Code */
+        #qrcode-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); justify-content: center; align-items: center; z-index: 1000; }
+        .modal-content { background: var(--cr-panel-bg); padding: 30px; border-radius: 8px; text-align: center; border: 1px solid var(--cr-border); max-width: 350px; width: 100%; }
+        #qrcode-container { background: white; padding: 15px; display: inline-block; border-radius: 6px; margin: 15px 0; }
     </style>
 </head>
 <body>
 
 <header>
     <h1>Gestion Logistique (MOT)</h1>
-    <div style="font-size: 0.8rem; color: #4caf50;">✔ Lots, Quantités, Matériel, Encoche unique & Duplication</div>
+    <div class="admin-status">
+        <span id="mode-badge" class="badge-mode mode-normal">Mode : Consultation</span>
+        <button id="admin-toggle-btn" class="btn btn-small btn-admin" onclick="toggleAdminMode()">Activer Admin</button>
+        <button id="change-pwd-btn" class="btn btn-small btn-pwd" style="display: none;" onclick="changeAdminPassword()">Changer mot de passe</button>
+    </div>
 </header>
 
-<div class="panel">
+<!-- Panneau d'ajout de lot (Visible uniquement en Admin) -->
+<div id="add-lot-panel" class="panel" style="display: none;">
     <h3>Ajouter un Lot / Conteneur</h3>
     <div class="form-inline">
         <input type="text" id="new-lot-name" placeholder="Nom du lot">
@@ -80,9 +99,12 @@
     </table>
 </div>
 
+<!-- Panneau de gestion des articles -->
 <div id="items-panel" class="panel" style="display: none;">
     <h3 id="items-title">Articles dans le lot</h3>
-    <div class="form-inline" style="background: #151515; padding: 12px; border-radius: 6px; border: 1px dashed var(--cr-border);">
+    
+    <!-- Formulaire d'ajout d'article (Visible uniquement en Admin) -->
+    <div id="add-item-form" class="form-inline" style="background: #151515; padding: 12px; border-radius: 6px; border: 1px dashed var(--cr-border); display: none;">
         <input type="text" id="item-name" placeholder="Nom de l'article">
         <input type="number" id="item-qty" placeholder="Qté" min="1" value="1">
         <input type="date" id="item-expiry">
@@ -95,26 +117,107 @@
 
     <table id="items-table">
         <thead>
-            <tr><th>Article</th><th>Quantité</th><th>Date Péremption / Type</th><th>Action</th></tr>
+            <tr><th>Article</th><th>Quantité</th><th>Date Péremption / Type</th><th id="th-item-actions">Action</th></tr>
         </thead>
         <tbody id="items-body"></tbody>
     </table>
     <button class="btn btn-secondary" onclick="closeItems()" style="margin-top: 15px;">Fermer la gestion du lot</button>
 </div>
 
+<!-- Modal QR Code -->
+<div id="qrcode-modal">
+    <div class="modal-content">
+        <h3 id="qr-modal-title" style="margin-bottom: 10px; color: #fff;">QR Code du lot</h3>
+        <div id="qrcode-container"></div>
+        <div style="margin-top: 15px; display: flex; gap: 10px; justify-content: center;">
+            <button class="btn" onclick="downloadQRCode()">Télécharger</button>
+            <button class="btn btn-secondary" onclick="closeQRCodeModal()">Fermer</button>
+        </div>
+    </div>
+</div>
+
 <script>
     let data = JSON.parse(localStorage.getItem('cr_data_github') || '[]');
     let currentContainerId = null;
+    let isAdmin = false;
+    
+    // Récupération du mot de passe admin enregistré ou "1234" par défaut
+    let currentAdminPassword = localStorage.getItem('cr_admin_pwd') || "1234";
 
     function saveToStorage() {
         localStorage.setItem('cr_data_github', JSON.stringify(data));
         renderContainers();
     }
 
+    function toggleAdminMode() {
+        if (!isAdmin) {
+            const code = prompt("Entrez le code administrateur :");
+            if (code === currentAdminPassword) {
+                isAdmin = true;
+                updateUIMode();
+                alert("Mode Administrateur activé.");
+            } else if (code !== null) {
+                alert("Code incorrect.");
+            }
+        } else {
+            isAdmin = false;
+            updateUIMode();
+            alert("Mode Administrateur désactivé.");
+        }
+    }
+
+    function changeAdminPassword() {
+        if (!isAdmin) return;
+        const oldPwd = prompt("Entrez l'ancien mot de passe administrateur :");
+        if (oldPwd === null) return;
+
+        if (oldPwd !== currentAdminPassword) {
+            alert("Ancien mot de passe incorrect.");
+            return;
+        }
+
+        const newPwd = prompt("Entrez le nouveau mot de passe administrateur :");
+        if (newPwd !== null && newPwd.trim() !== "") {
+            const confirmPwd = prompt("Confirmez le nouveau mot de passe :");
+            if (confirmPwd === newPwd) {
+                currentAdminPassword = newPwd;
+                localStorage.setItem('cr_admin_pwd', currentAdminPassword);
+                alert("Mot de passe administrateur modifié avec succès !");
+            } else {
+                alert("Les mots de passe ne correspondent pas. Modification annulée.");
+            }
+        }
+    }
+
+    function updateUIMode() {
+        const badge = document.getElementById('mode-badge');
+        const btn = document.getElementById('admin-toggle-btn');
+        const changePwdBtn = document.getElementById('change-pwd-btn');
+        const addLotPanel = document.getElementById('add-lot-panel');
+        const addItemForm = document.getElementById('add-item-form');
+
+        if (isAdmin) {
+            badge.textContent = "Mode : Administrateur";
+            badge.className = "badge-mode mode-admin";
+            btn.textContent = "Verrouiller Admin";
+            changePwdBtn.style.display = 'inline-block';
+            addLotPanel.style.display = 'block';
+            addItemForm.style.display = 'flex';
+        } else {
+            badge.textContent = "Mode : Consultation";
+            badge.className = "badge-mode mode-normal";
+            btn.textContent = "Activer Admin";
+            changePwdBtn.style.display = 'none';
+            addLotPanel.style.display = 'none';
+            addItemForm.style.display = 'none';
+        }
+        renderContainers();
+        if (currentContainerId !== null) renderItems();
+    }
+
     function toggleNoExpiryField() {
         const noExpiry = document.getElementById('item-no-expiry').checked;
         const expiryInput = document.getElementById('item-expiry');
-        
         expiryInput.disabled = noExpiry;
         expiryInput.style.opacity = noExpiry ? '0.3' : '1';
     }
@@ -160,6 +263,18 @@
 
         tbody.innerHTML = data.map(c => {
             const status = getLotStatus(c.items);
+            
+            let adminActions = '';
+            let qrCodeBtn = `<button class="btn btn-small btn-secondary" onclick="showQRCode(${c.id})">QR Code</button>`;
+            
+            if (isAdmin) {
+                adminActions = `
+                    <button class="btn btn-small btn-edit" onclick="renameLot(${c.id})">Renommer</button>
+                    <button class="btn btn-small btn-duplicate" onclick="duplicateLot(${c.id})">Dupliquer</button>
+                    <button class="btn btn-small" style="background:#800;" onclick="deleteLot(${c.id})">X</button>
+                `;
+            }
+
             return `<tr>
                 <td><strong>${c.name}</strong></td>
                 <td>${c.encoche || '-'}</td>
@@ -169,16 +284,16 @@
                     <button class="btn btn-small btn-secondary" onclick="toggleCheck(${c.id})">${c.lastChecked ? 'Dévalider' : 'Valider'}</button>
                 </td>
                 <td>
-                    <button class="btn btn-small btn-edit" onclick="renameLot(${c.id})">Renommer</button>
-                    <button class="btn btn-small btn-duplicate" onclick="duplicateLot(${c.id})">Dupliquer</button>
+                    ${qrCodeBtn}
                     <button class="btn btn-small" onclick="viewItems(${c.id})">Articles</button>
-                    <button class="btn btn-small" style="background:#800;" onclick="deleteLot(${c.id})">X</button>
+                    ${adminActions}
                 </td>
             </tr>`;
         }).join('');
     }
 
     function addNewLot() {
+        if (!isAdmin) return;
         const nameInput = document.getElementById('new-lot-name');
         const encocheInput = document.getElementById('new-lot-encoche');
         if (!nameInput.value.trim()) { alert("Nom requis."); return; }
@@ -188,6 +303,7 @@
     }
 
     function renameLot(id) {
+        if (!isAdmin) return;
         const c = data.find(x => x.id === id);
         const newName = prompt("Nouveau nom du lot :", c.name);
         const newEncoche = prompt("Nouvelle encoche :", c.encoche || '');
@@ -199,6 +315,7 @@
     }
 
     function duplicateLot(id) {
+        if (!isAdmin) return;
         const c = data.find(x => x.id === id);
         const newName = prompt("Nom du nouveau lot dupliqué :", c.name + " (Copie)");
         if (newName !== null && newName.trim() !== "") {
@@ -223,6 +340,7 @@
     }
 
     function deleteLot(id) {
+        if (!isAdmin) return;
         if (confirm("Supprimer ce lot ?")) {
             data = data.filter(x => x.id !== id);
             saveToStorage();
@@ -242,8 +360,15 @@
     function renderItems() {
         const c = data.find(x => x.id === currentContainerId);
         const tbody = document.getElementById('items-body');
-        if (!c || !c.items || c.items.length === 0) { tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;">Vide.</td></tr>`; return; }
+        const thActions = document.getElementById('th-item-actions');
+        
+        if (!c || !c.items || c.items.length === 0) { 
+            tbody.innerHTML = `<tr><td colspan="${isAdmin ? 4 : 3}" style="text-align:center;">Vide.</td></tr>`; 
+            thActions.style.display = isAdmin ? 'table-cell' : 'none';
+            return; 
+        }
 
+        thActions.style.display = isAdmin ? 'table-cell' : 'none';
         const now = new Date();
         now.setHours(0, 0, 0, 0);
 
@@ -272,20 +397,28 @@
                 }
             }
 
+            let adminItemActions = '';
+            if (isAdmin) {
+                adminItemActions = `
+                    <td>
+                        <button class="btn btn-small btn-edit" onclick="editItem(${idx})">Modif</button> 
+                        <button class="btn btn-small btn-duplicate" onclick="duplicateItem(${idx})">Dupliquer</button>
+                        <button class="btn btn-small" style="background:#800;" onclick="deleteItem(${idx})">X</button>
+                    </td>
+                `;
+            }
+
             return `<tr class="${rowClass}">
                 <td>${i.name}</td>
                 <td><strong>${i.qty}</strong></td>
                 <td>${expiryHtml}</td>
-                <td>
-                    <button class="btn btn-small btn-edit" onclick="editItem(${idx})">Modif</button> 
-                    <button class="btn btn-small btn-duplicate" onclick="duplicateItem(${idx})">Dupliquer</button>
-                    <button class="btn btn-small" style="background:#800;" onclick="deleteItem(${idx})">X</button>
-                </td>
+                ${adminItemActions}
             </tr>`;
         }).join('');
     }
 
     function addItemToCurrentLot() {
+        if (!isAdmin) return;
         const name = document.getElementById('item-name').value.trim();
         const qty = parseInt(document.getElementById('item-qty').value);
         const noExpiry = document.getElementById('item-no-expiry').checked;
@@ -305,6 +438,7 @@
     }
 
     function editItem(idx) {
+        if (!isAdmin) return;
         const c = data.find(x => x.id === currentContainerId);
         const i = c.items[idx];
         const n = prompt("Nom :", i.name);
@@ -312,10 +446,10 @@
     }
 
     function duplicateItem(idx) {
+        if (!isAdmin) return;
         const c = data.find(x => x.id === currentContainerId);
         const itemToCopy = c.items[idx];
         
-        // Proposer de dupliquer soit dans le même lot, soit vers un autre lot existant
         let lotNames = data.map(l => l.name).join(', ');
         let targetLotName = prompt(`Nom du lot cible pour dupliquer "${itemToCopy.name}" (laisser vide pour le même lot) :\n\nLots disponibles : ${lotNames}`, c.name);
         
@@ -336,10 +470,55 @@
     }
 
     function deleteItem(idx) {
+        if (!isAdmin) return;
         const c = data.find(x => x.id === currentContainerId);
         c.items.splice(idx, 1);
         saveToStorage();
         renderItems();
+    }
+
+    function showQRCode(id) {
+        if (!isAdmin) {
+            alert("Accès refusé : La génération de QR code nécessite le mode administrateur.");
+            return;
+        }
+
+        const c = data.find(x => x.id === id);
+        if (!c) return;
+
+        document.getElementById('qr-modal-title').textContent = "QR Code : " + c.name + " (" + (c.encoche || "Sans encoche") + ")";
+        
+        const container = document.getElementById('qrcode-container');
+        container.innerHTML = "";
+
+        let qrData = `Lot: ${c.name} | Encoche: ${c.encoche || 'N/A'} | ID: ${c.id}`;
+
+        new QRCode(container, {
+            text: qrData,
+            width: 200,
+            height: 200,
+            colorDark : "#000000",
+            colorLight : "#ffffff",
+            correctLevel : QRCode.CorrectLevel.H
+        });
+
+        document.getElementById('qrcode-modal').style.display = 'flex';
+    }
+
+    function downloadQRCode() {
+        const img = document.querySelector('#qrcode-container img');
+        if (!img) return;
+
+        const link = document.createElement('a');
+        link.href = img.src;
+        link.download = 'qrcode_lot.png';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    function closeQRCodeModal() {
+        document.getElementById('qrcode-modal').style.display = 'none';
     }
 
     function closeItems() { document.getElementById('items-panel').style.display = 'none'; }
