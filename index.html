@@ -30,6 +30,7 @@
         .btn-small { padding: 5px 10px; font-size: 0.8rem; margin: 2px; }
         .btn-secondary { background: #333; color: #ccc; }
         .btn-edit { background: #1976d2; color: white; }
+        .btn-duplicate { background: #00897b; color: white; }
 
         .badge { padding: 4px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; display: inline-block; }
         .badge-ok { background: #1b5e20; color: #81c784; }
@@ -51,7 +52,7 @@
 
 <header>
     <h1>Gestion Logistique (MOT)</h1>
-    <div style="font-size: 0.8rem; color: #4caf50;">✔ Lots, Quantités, Matériel, Encoches & Alertes</div>
+    <div style="font-size: 0.8rem; color: #4caf50;">✔ Lots, Quantités, Matériel, Encoche unique & Duplication</div>
 </header>
 
 <div class="panel">
@@ -87,11 +88,7 @@
         <input type="date" id="item-expiry">
         <label class="checkbox-container">
             <input type="checkbox" id="item-no-expiry" onchange="toggleNoExpiryField()">
-            <span>♾️ Sans date de péremption</span>
-        </label>
-        <label class="checkbox-container">
-            <input type="checkbox" id="item-is-electronic" onchange="toggleExpiryField()">
-            <span>🔋 (Sans péremption) Électronique</span>
+            <span>♾️ Sans date / Électronique</span>
         </label>
         <button class="btn" onclick="addItemToCurrentLot()">Ajouter</button>
     </div>
@@ -114,32 +111,12 @@
         renderContainers();
     }
 
-    function toggleExpiryField() {
-        const isElec = document.getElementById('item-is-electronic').checked;
-        const noExpiry = document.getElementById('item-no-expiry');
-        const expiryInput = document.getElementById('item-expiry');
-        
-        if (isElec && noExpiry.checked) {
-            noExpiry.checked = false;
-        }
-        
-        const disabled = isElec || noExpiry.checked;
-        expiryInput.disabled = disabled;
-        expiryInput.style.opacity = disabled ? '0.3' : '1';
-    }
-
     function toggleNoExpiryField() {
         const noExpiry = document.getElementById('item-no-expiry').checked;
-        const isElec = document.getElementById('item-is-electronic');
         const expiryInput = document.getElementById('item-expiry');
         
-        if (noExpiry && isElec.checked) {
-            isElec.checked = false;
-        }
-        
-        const disabled = noExpiry || isElec.checked;
-        expiryInput.disabled = disabled;
-        expiryInput.style.opacity = disabled ? '0.3' : '1';
+        expiryInput.disabled = noExpiry;
+        expiryInput.style.opacity = noExpiry ? '0.3' : '1';
     }
 
     function parseExpiryDate(expiryStr) {
@@ -164,7 +141,7 @@
         
         let worst = 0; 
         items.forEach(i => {
-            if (i.isElectronic || i.noExpiry) return; 
+            if (i.noExpiry) return; 
             const exp = parseExpiryDate(i.expiry);
             if (!exp || isNaN(exp)) return;
             const diff = (exp - now) / (1000 * 60 * 60 * 24);
@@ -193,6 +170,7 @@
                 </td>
                 <td>
                     <button class="btn btn-small btn-edit" onclick="renameLot(${c.id})">Renommer</button>
+                    <button class="btn btn-small btn-duplicate" onclick="duplicateLot(${c.id})">Dupliquer</button>
                     <button class="btn btn-small" onclick="viewItems(${c.id})">Articles</button>
                     <button class="btn btn-small" style="background:#800;" onclick="deleteLot(${c.id})">X</button>
                 </td>
@@ -216,6 +194,22 @@
         if (newName !== null) {
             c.name = newName.trim();
             c.encoche = newEncoche.trim();
+            saveToStorage();
+        }
+    }
+
+    function duplicateLot(id) {
+        const c = data.find(x => x.id === id);
+        const newName = prompt("Nom du nouveau lot dupliqué :", c.name + " (Copie)");
+        if (newName !== null && newName.trim() !== "") {
+            const duplicatedItems = JSON.parse(JSON.stringify(c.items));
+            data.push({
+                id: Date.now(),
+                name: newName.trim(),
+                encoche: c.encoche || '',
+                items: duplicatedItems,
+                lastChecked: null
+            });
             saveToStorage();
         }
     }
@@ -257,10 +251,8 @@
             let expiryHtml = '';
             let rowClass = '';
 
-            if (i.isElectronic) {
-                expiryHtml = '🔋 (Sans péremption) Électronique';
-            } else if (i.noExpiry) {
-                expiryHtml = '♾️ Sans date de péremption';
+            if (i.noExpiry) {
+                expiryHtml = '♾️ Sans date / Électronique';
             } else {
                 const expDate = parseExpiryDate(i.expiry);
                 if (!expDate || isNaN(expDate)) {
@@ -286,6 +278,7 @@
                 <td>${expiryHtml}</td>
                 <td>
                     <button class="btn btn-small btn-edit" onclick="editItem(${idx})">Modif</button> 
+                    <button class="btn btn-small btn-duplicate" onclick="duplicateItem(${idx})">Dupliquer</button>
                     <button class="btn btn-small" style="background:#800;" onclick="deleteItem(${idx})">X</button>
                 </td>
             </tr>`;
@@ -295,18 +288,16 @@
     function addItemToCurrentLot() {
         const name = document.getElementById('item-name').value.trim();
         const qty = parseInt(document.getElementById('item-qty').value);
-        const isElectronic = document.getElementById('item-is-electronic').checked;
         const noExpiry = document.getElementById('item-no-expiry').checked;
         const expiry = document.getElementById('item-expiry').value;
         
-        if (!name || isNaN(qty) || (!isElectronic && !noExpiry && !expiry)) { alert("Champs invalides."); return; }
+        if (!name || isNaN(qty) || (!noExpiry && !expiry)) { alert("Champs invalides."); return; }
         
         const c = data.find(x => x.id === currentContainerId);
         c.items.push({ 
             name, 
             qty, 
-            expiry: (isElectronic || noExpiry) ? null : expiry, 
-            isElectronic, 
+            expiry: noExpiry ? null : expiry, 
             noExpiry 
         });
         saveToStorage();
@@ -318,6 +309,30 @@
         const i = c.items[idx];
         const n = prompt("Nom :", i.name);
         if (n !== null) { i.name = n; saveToStorage(); renderItems(); }
+    }
+
+    function duplicateItem(idx) {
+        const c = data.find(x => x.id === currentContainerId);
+        const itemToCopy = c.items[idx];
+        
+        // Proposer de dupliquer soit dans le même lot, soit vers un autre lot existant
+        let lotNames = data.map(l => l.name).join(', ');
+        let targetLotName = prompt(`Nom du lot cible pour dupliquer "${itemToCopy.name}" (laisser vide pour le même lot) :\n\nLots disponibles : ${lotNames}`, c.name);
+        
+        if (targetLotName !== null) {
+            let targetLot = data.find(l => l.name.toLowerCase() === targetLotName.trim().toLowerCase());
+            if (!targetLot) {
+                alert("Lot cible introuvable, duplication annulée.");
+                return;
+            }
+            targetLot.items.push(JSON.parse(JSON.stringify(itemToCopy)));
+            saveToStorage();
+            if (currentContainerId === targetLot.id) {
+                renderItems();
+            } else {
+                alert(`Article dupliqué avec succès dans le lot : ${targetLot.name}`);
+            }
+        }
     }
 
     function deleteItem(idx) {
