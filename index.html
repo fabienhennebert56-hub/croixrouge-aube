@@ -467,15 +467,23 @@
                                 </h2>
                                 <span class="text-xs bg-gray-800 text-gray-300 border border-gray-700 px-2.5 py-0.5 rounded-full font-medium">${lot.items.length} réf.</span>
                             </div>
-                            <div class="flex items-center space-x-2">
+                            <div class="flex items-center space-x-2 flex-wrap gap-2">
                                 <button onclick="showLotQRCode('${lot.id}', '${escapeHTML(lot.name)}')" class="bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded-xl text-xs font-medium transition flex items-center space-x-1.5 border border-gray-700">
                                     <i class="fa-solid fa-qrcode text-red-500"></i>
                                     <span>QR Code</span>
                                 </button>
                                 ${isAdmin ? `
+                                    <button onclick="renameCategory('${lot.id}')" class="bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded-xl text-xs font-medium transition flex items-center space-x-1.5 border border-gray-700">
+                                        <i class="fa-solid fa-pen text-blue-400"></i>
+                                        <span>Renommer</span>
+                                    </button>
+                                    <button onclick="duplicateCategory('${lot.id}')" class="bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded-xl text-xs font-medium transition flex items-center space-x-1.5 border border-gray-700">
+                                        <i class="fa-solid fa-copy text-emerald-400"></i>
+                                        <span>Dupliquer</span>
+                                    </button>
                                     <button onclick="deleteCategory('${lot.id}')" class="bg-red-950/60 hover:bg-red-900 text-red-400 border border-red-900/50 px-3 py-1.5 rounded-xl text-xs font-medium transition flex items-center space-x-1.5">
                                         <i class="fa-solid fa-trash"></i>
-                                        <span>Supprimer lot</span>
+                                        <span>Supprimer</span>
                                     </button>
                                 ` : ''}
                             </div>
@@ -506,7 +514,7 @@
             if (status === "expired") {
                 badgeHTML = `<span class="bg-red-950 text-red-400 border border-red-900 text-xs px-2 py-0.5 rounded-full font-medium flex items-center space-x-1"><i class="fa-solid fa-triangle-exclamation"></i><span>Périmé</span></span>`;
             } else if (status === "warning") {
-                badgeHTML = `<span class="bg-amber-950 text-amber-400 border border-amber-900 text-xs px-2 py-0.5 rounded-full font-medium flex items-center space-x-1"><i class="fa-solid fa-clock"><span>Bientôt périmé</span></span>`;
+                badgeHTML = `<span class="bg-amber-950 text-amber-400 border border-amber-900 text-xs px-2 py-0.5 rounded-full font-medium flex items-center space-x-1"><i class="fa-solid fa-clock"></i><span>Bientôt périmé</span></span>`;
             }
 
             const isLowStock = item.qty <= item.min;
@@ -514,31 +522,32 @@
             const badgeLotDisplay = lotNameBadge ? `<span class="text-xs bg-gray-800 text-gray-400 px-2 py-0.5 rounded-lg mr-2 font-medium border border-gray-700">${escapeHTML(lotNameBadge)}</span>` : "";
 
             return `
-                py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-gray-950/40 px-3 rounded-xl transition
-                <div class="flex items-center space-x-3">
-                    <div>
-                        <div class="flex items-center flex-wrap gap-1">
-                            ${badgeLotDisplay}
-                            <h4 class="text-sm font-semibold text-gray-200">${escapeHTML(item.name)}</h4>
-                            ${stockBadge}
-                        </div>
-                        <div class="flex items-center space-x-3 text-xs text-gray-400 mt-0.5">
-                            <span>Péremption : ${item.expiry ? item.expiry : 'Non renseignée'}</span>
-                            ${badgeHTML}
+                <div class="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-gray-950/40 px-3 rounded-xl transition">
+                    <div class="flex items-center space-x-3">
+                        <div>
+                            <div class="flex items-center flex-wrap gap-1">
+                                ${badgeLotDisplay}
+                                <h4 class="text-sm font-semibold text-gray-200">${escapeHTML(item.name)}</h4>
+                                ${stockBadge}
+                            </div>
+                            <div class="flex items-center space-x-3 text-xs text-gray-400 mt-0.5">
+                                <span>Péremption : ${item.expiry ? item.expiry : 'Non renseignée'}</span>
+                                ${badgeHTML}
+                            </div>
                         </div>
                     </div>
-                </div>
-                <div class="flex items-center justify-between sm:justify-end space-x-3">
-                    <div class="flex items-center space-x-2 bg-gray-950 border border-gray-800 px-3 py-1.5 rounded-xl">
-                        <button onclick="updateQty('${lotId}', '${item.id}', -1)" class="text-gray-400 hover:text-white px-1.5 py-0.5 transition"><i class="fa-solid fa-minus text-xs"></i></button>
-                        <span class="text-sm font-bold text-white w-6 text-center">${item.qty}</span>
-                        <button onclick="updateQty('${lotId}', '${item.id}', 1)" class="text-gray-400 hover:text-white px-1.5 py-0.5 transition"><i class="fa-solid fa-plus text-xs"></i></button>
+                    <div class="flex items-center justify-between sm:justify-end space-x-3">
+                        <div class="flex items-center space-x-2 bg-gray-950 border border-gray-800 px-3 py-1.5 rounded-xl">
+                            <button onclick="updateQty('${lotId}', '${item.id}', -1)" class="text-gray-400 hover:text-white px-1.5 py-0.5 transition"><i class="fa-solid fa-minus text-xs"></i></button>
+                            <span class="text-sm font-bold text-white w-6 text-center">${item.qty}</span>
+                            <button onclick="updateQty('${lotId}', '${item.id}', 1)" class="text-gray-400 hover:text-white px-1.5 py-0.5 transition"><i class="fa-solid fa-plus text-xs"></i></button>
+                        </div>
+                        ${isAdmin ? `
+                            <button onclick="deleteItem('${lotId}', '${item.id}')" class="text-gray-500 hover:text-red-400 p-2 transition">
+                                <i class="fa-solid fa-trash text-sm"></i>
+                            </button>
+                        ` : ''}
                     </div>
-                    ${isAdmin ? `
-                        <button onclick="deleteItem('${lotId}', '${item.id}')" class="text-gray-500 hover:text-red-400 p-2 transition">
-                            <i class="fa-solid fa-trash text-sm"></i>
-                        </button>
-                    ` : ''}
                 </div>
             `;
         }
@@ -611,7 +620,7 @@
             saveData();
         }
 
-        // Gestion administrative : Ajout et suppression
+        // Gestion administrative : Ajout, Suppression, Renommage et Duplication de lots
         function updateItemCategorySelect() {
             const select = document.getElementById("item-category-select");
             select.innerHTML = "";
@@ -638,6 +647,37 @@
             nameInput.value = "";
             closeModal("add-category-modal");
             saveData();
+        }
+
+        function renameCategory(lotId) {
+            const lot = inventoryData.find(l => l.id === lotId);
+            if (!lot) return;
+            const newName = prompt("Nouveau nom pour ce lot :", lot.name);
+            if (newName !== null && newName.trim() !== "") {
+                lot.name = newName.trim();
+                saveData();
+            }
+        }
+
+        function duplicateCategory(lotId) {
+            const lot = inventoryData.find(l => l.id === lotId);
+            if (!lot) return;
+            const newName = prompt("Nom du nouveau lot dupliqué :", lot.name + " (Copie)");
+            if (newName !== null && newName.trim() !== "") {
+                const duplicatedItems = lot.items.map(item => ({
+                    ...item,
+                    id: "item-" + Date.now() + "-" + Math.random().toString(36.substring(2, 7))
+                }));
+
+                const newLot = {
+                    id: "lot-" + Date.now(),
+                    name: newName.trim(),
+                    items: duplicatedItems
+                };
+
+                inventoryData.push(newLot);
+                saveData();
+            }
         }
 
         function deleteCategory(lotId) {
@@ -734,7 +774,7 @@
                     const lot = inventoryData.find(l => l.id === decodedText);
                     if (lot) {
                         document.getElementById("filter-lot").value = lot.id;
-                        document.getElementById("scan-result.innerHTML").innerHTML = `<span class="text-emerald-400 font-semibold">Lot trouvé : ${escapeHTML(lot.name)}</span>`;
+                        document.getElementById("scan-result").innerHTML = `<span class="text-emerald-400 font-semibold">Lot trouvé : ${escapeHTML(lot.name)}</span>`;
                         closeScannerModal();
                         renderInventory();
                     } else {
