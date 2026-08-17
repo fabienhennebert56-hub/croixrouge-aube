@@ -301,7 +301,7 @@
                                     <span>Cible : <strong class="text-white">${art.targetQty}</strong></span>
                                     <div class="flex items-center space-x-1">
                                         <span>Péremption :</span>
-                                        <input type="date" value="${art.expiryDate || ''}" onchange="app.updateExpiry('${art.id}', this.value)" class="bg-gray-900 border border-gray-700 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-croixrouge-500">
+                                        <input type="date" value="${art.expiryDate || ''}" onchange="app.updateExpiry('${art.id}', this.value)" class="bg-gray-900 border ${art.expiryDate && art.expiryDate < new Date().toISOString().split('T')[0] ? 'border-red-500 text-red-300' : 'border-gray-700 text-white'} rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-croixrouge-500">
                                     </div>
                                 </div>
                             </div>
@@ -321,18 +321,25 @@
         }
 
         renderReapproView() {
-            let itemsToReappro = [];
+            let itemsToAlert = [];
+            const today = new Date().toISOString().split('T')[0];
+
             this.data.categories.forEach(cat => {
                 if (cat.lots) {
                     cat.lots.forEach(lot => {
                         if (lot.articles) {
                             lot.articles.forEach(art => {
-                                if (art.currentQty < art.targetQty) {
-                                    itemsToReappro.push({
+                                const isMissing = art.currentQty < art.targetQty;
+                                const isExpired = art.expiryDate && art.expiryDate < today;
+
+                                if (isMissing || isExpired) {
+                                    itemsToAlert.push({
                                         catName: cat.name,
                                         lotName: lot.name,
                                         art: art,
-                                        missing: art.targetQty - art.currentQty
+                                        missing: art.targetQty - art.currentQty,
+                                        isMissing: isMissing,
+                                        isExpired: isExpired
                                     });
                                 }
                             });
@@ -346,19 +353,20 @@
                     <span>← Retour à l'accueil</span>
                 </button>
                 <div class="bg-gray-800 p-5 rounded-2xl border border-gray-700 mb-6">
-                    <h2 class="text-xl font-bold text-white">Liste de Réapprovisionnement</h2>
-                    <p class="text-xs text-gray-400">Articles dont le stock actuel est inférieur au stock théorique cible.</p>
+                    <h2 class="text-xl font-bold text-white">Centre d'Alertes (Réappro & Péremptions)</h2>
+                    <p class="text-xs text-gray-400">Articles nécessitant un réapprovisionnement ou dont la date de péremption est dépassée.</p>
                 </div>
                 <div class="space-y-3">
-                    ${itemsToReappro.length === 0 ? `<p class="text-center text-gray-500 text-sm py-12">Tout est complet ! Aucun réapprovisionnement nécessaire.</p>` : itemsToReappro.map(item => `
-                        <div class="bg-gray-800 p-4 rounded-xl border border-gray-700 flex justify-between items-center">
+                    ${itemsToAlert.length === 0 ? `<p class="text-center text-gray-500 text-sm py-12">Tout est en ordre ! Aucun réapprovisionnement ni péremption.</p>` : itemsToAlert.map(item => `
+                        <div class="bg-gray-800 p-4 rounded-xl border ${item.isExpired ? 'border-red-600/50 bg-red-950/20' : 'border-gray-700'} flex justify-between items-center">
                             <div class="space-y-1">
                                 <span class="text-xs text-croixrouge-500 font-bold uppercase tracking-wider">${item.catName} > ${item.lotName}</span>
                                 <h3 class="font-bold text-white text-sm">${item.art.name}</h3>
-                                <div class="flex items-center space-x-3 text-xs text-gray-400">
+                                <div class="flex flex-wrap items-center space-x-3 text-xs text-gray-400 gap-y-1">
                                     <span>Actuel : <strong class="text-white">${item.art.currentQty}</strong></span>
                                     <span>Cible : <strong class="text-white">${item.art.targetQty}</strong></span>
-                                    <span class="text-croixrouge-500 font-bold">Manque : ${item.missing}</span>
+                                    ${item.isMissing ? `<span class="text-croixrouge-500 font-bold">Manque : ${item.missing}</span>` : ''}
+                                    ${item.isExpired ? `<span class="text-red-400 font-bold bg-red-900/40 px-2 py-0.5 rounded">Périmé (${item.art.expiryDate})</span>` : ''}
                                 </div>
                             </div>
                         </div>
@@ -476,7 +484,7 @@
                             <span>Cible : <strong class="text-white">${art.targetQty}</strong></span>
                             <div class="flex items-center space-x-1">
                                 <span>Péremption :</span>
-                                <input type="date" value="${art.expiryDate || ''}" onchange="app.updateExpiry('${art.id}', this.value)" class="bg-gray-900 border border-gray-700 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-croixrouge-500">
+                                <input type="date" value="${art.expiryDate || ''}" onchange="app.updateExpiry('${art.id}', this.value)" class="bg-gray-900 border ${art.expiryDate && art.expiryDate < new Date().toISOString().split('T')[0] ? 'border-red-500 text-red-300' : 'border-gray-700 text-white'} rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-croixrouge-500">
                             </div>
                         </div>
                     </div>
