@@ -383,7 +383,9 @@
 
                                 if (isMissing || isExpired) {
                                     itemsToAlert.push({
+                                        catId: cat.id,
                                         catName: cat.name,
+                                        lotId: lot.id,
                                         lotName: lot.name,
                                         art: art,
                                         missing: art.targetQty - art.currentQty,
@@ -407,7 +409,7 @@
                 </div>
                 <div class="space-y-3">
                     ${itemsToAlert.length === 0 ? `<p class="text-center text-gray-500 text-sm py-12">Tout est en ordre ! Aucun réapprovisionnement ni péremption.</p>` : itemsToAlert.map(item => `
-                        <div class="bg-gray-800 p-4 rounded-xl border ${item.isExpired ? 'border-red-600/50 bg-red-950/20' : 'border-gray-700'} flex justify-between items-center">
+                        <div class="bg-gray-800 p-4 rounded-xl border ${item.isExpired ? 'border-red-600/50 bg-red-950/20' : 'border-gray-700'} flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                             <div class="space-y-1">
                                 <span class="text-xs text-croixrouge-500 font-bold uppercase tracking-wider">${item.catName} > ${item.lotName}</span>
                                 <h3 class="font-bold text-white text-sm">${item.art.name}</h3>
@@ -418,10 +420,98 @@
                                     ${item.isExpired ? `<span class="text-red-400 font-bold bg-red-900/40 px-2 py-0.5 rounded">Périmé (${item.art.expiryDate})</span>` : ''}
                                 </div>
                             </div>
+                            <div class="flex items-center space-x-2 w-full sm:w-auto justify-end">
+                                ${item.isExpired ? `
+                                    <button onclick="app.openValidateExpiryModal('${item.art.id}')" class="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-medium transition shadow-sm">
+                                        🔄 Remplacer (Péremption)
+                                    </button>
+                                ` : ''}
+                                ${item.isMissing ? `
+                                    <button onclick="app.openRestockModal('${item.art.id}')" class="px-3 py-1.5 bg-croixrouge-600 hover:bg-croixrouge-700 text-white rounded-xl text-xs font-medium transition shadow-sm">
+                                        ➕ Réapprovisionner
+                                    </button>
+                                ` : ''}
+                            </div>
                         </div>
                     `).join('')}
                 </div>
             `;
+        }
+
+        openValidateExpiryModal(artId) {
+            const art = this.findArticle(artId);
+            if (!art) return;
+
+            this.openModal(`
+                <h3 class="text-xl font-bold mb-2 text-white">Validation de Péremption</h3>
+                <p class="text-sm text-gray-300 mb-4">Article : <strong class="text-white">${art.name}</strong></p>
+                <p class="text-xs text-gray-400 mb-4">Ancienne date dépassée : <span class="text-red-400 font-bold">${art.expiryDate || 'Aucune'}</span></p>
+                <form onsubmit="app.saveValidateExpiry(event, '${artId}')" class="space-y-4">
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-1">Nouvelle date de péremption (Obligatoire)</label>
+                        <input type="date" id="new-expiry-date" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-croixrouge-500" required autofocus>
+                    </div>
+                    <div class="flex justify-end space-x-2 pt-2">
+                        <button type="button" onclick="app.closeModal()" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-xl text-sm font-medium">Annuler</button>
+                        <button type="submit" class="px-4 py-2 bg-croixrouge-600 hover:bg-croixrouge-700 rounded-xl text-sm font-medium text-white">Valider le remplacement</button>
+                    </div>
+                </form>
+            `);
+        }
+
+        saveValidateExpiry(event, artId) {
+            event.preventDefault();
+            const newDate = document.getElementById('new-expiry-date').value;
+            if (!newDate) return;
+
+            const art = this.findArticle(artId);
+            if (!art) return;
+
+            art.expiryDate = newDate;
+            this.saveData();
+            this.closeModal();
+            this.render();
+            this.showNotification("Date de péremption mise à jour avec succès !", "success");
+        }
+
+        openRestockModal(artId) {
+            const art = this.findArticle(artId);
+            if (!art) return;
+            const missingQty = Math.max(0, art.targetQty - art.currentQty);
+
+            this.openModal(`
+                <h3 class="text-xl font-bold mb-2 text-white">Réapprovisionnement</h3>
+                <p class="text-sm text-gray-300 mb-2">Article : <strong class="text-white">${art.name}</strong></p>
+                <div class="bg-gray-900 p-3 rounded-xl mb-4 text-xs space-y-1 border border-gray-700">
+                    <p class="text-gray-400">Stock actuel : <span class="text-white font-bold">${art.currentQty}</span> | Cible : <span class="text-white font-bold">${art.targetQty}</span></p>
+                    <p class="text-croixrouge-500 font-bold">Quantité manquante conseillée : ${missingQty}</p>
+                </div>
+                <form onsubmit="app.saveRestock(event, '${artId}')" class="space-y-4">
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-1">Quantité ajoutée</label>
+                        <input type="number" id="restock-qty-added" value="${missingQty}" min="1" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-croixrouge-500" required autofocus>
+                    </div>
+                    <div class="flex justify-end space-x-2 pt-2">
+                        <button type="button" onclick="app.closeModal()" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-xl text-sm font-medium">Annuler</button>
+                        <button type="submit" class="px-4 py-2 bg-croixrouge-600 hover:bg-croixrouge-700 rounded-xl text-sm font-medium text-white">Valider l'ajout</button>
+                    </div>
+                </form>
+            `);
+        }
+
+        saveRestock(event, artId) {
+            event.preventDefault();
+            const addedQty = parseInt(document.getElementById('restock-qty-added').value) || 0;
+            if (addedQty <= 0) return;
+
+            const art = this.findArticle(artId);
+            if (!art) return;
+
+            art.currentQty += addedQty;
+            this.saveData();
+            this.closeModal();
+            this.render();
+            this.showNotification(`Stock mis à jour (+${addedQty}) avec succès !`, "success");
         }
 
         updateQty(artId, change) {
