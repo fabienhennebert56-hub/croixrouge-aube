@@ -70,7 +70,6 @@
             this.binId = "6a81d9d1da38895dfeebb8b2";
             this.apiKey = "$2a$10$rvsRxq/Z7qxtzzobIJh3buDRx.5FOPWVBi.ubxnM4AXn.3eyig0Hq";
             
-            // Données par défaut vides en attendant le chargement cloud
             this.data = { categories: [] };
             this.isAdmin = false;
             this.isCloudConnected = true;
@@ -79,7 +78,6 @@
             this.selectedLotId = null;
             this.searchFilterText = '';
 
-            // Lancement du chargement initial depuis le cloud
             this.initData();
         }
 
@@ -98,9 +96,7 @@
         async loadFromCloud() {
             try {
                 const response = await fetch(`https://api.jsonbin.io/v3/b/${this.binId}/latest`, {
-                    headers: {
-                        'X-Master-Key': this.apiKey
-                    }
+                    headers: { 'X-Master-Key': this.apiKey }
                 });
                 if (response.ok) {
                     const resData = await response.json();
@@ -140,7 +136,6 @@
 
         saveData() {
             localStorage.setItem('croix_rouge_data', JSON.stringify(this.data));
-            
             if (this.isCloudConnected) {
                 this.syncToCloudSilent();
             }
@@ -164,7 +159,7 @@
         toggleCloudMode() {
             if (this.isCloudConnected) {
                 this.isCloudConnected = false;
-                this.showNotification("Déconnecté de JSONBin : modifications en local uniquement (0 requête).", "info");
+                this.showNotification("Déconnecté de JSONBin : modifications en local uniquement.", "info");
             } else {
                 this.isCloudConnected = true;
                 this.syncToCloudGlobal();
@@ -183,7 +178,7 @@
                     body: JSON.stringify(this.data)
                 });
                 if (response.ok) {
-                    this.showNotification("Reconnecté et synchronisation globale réussie (1 requête) !", "success");
+                    this.showNotification("Reconnecté et synchronisation globale réussie !", "success");
                 } else {
                     this.showNotification("Erreur lors de la reconnexion cloud.", "error");
                     this.isCloudConnected = false;
@@ -268,9 +263,6 @@
             const lot = cat ? cat.lots.find(l => l.id === this.selectedLotId) : null;
             if (!lot) return `<p>Lot introuvable.</p>`;
 
-            const articles = lot.articles || [];
-            const filteredArticles = articles.filter(art => art.name.toLowerCase().includes(this.searchFilterText.toLowerCase()));
-
             return `
                 <button onclick="app.switchView('home')" class="mb-4 text-xs text-gray-400 hover:text-white transition flex items-center space-x-1">
                     <span>← Retour aux catégories</span>
@@ -292,32 +284,89 @@
                     </div>
                 </div>
                 <div class="space-y-3" id="articles-container">
-                    ${filteredArticles.length === 0 ? `<p class="text-center text-gray-500 text-sm py-8">Aucun article trouvé dans ce lot.</p>` : filteredArticles.map(art => `
-                        <div class="bg-gray-800 p-4 rounded-xl border border-gray-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                            <div class="space-y-1">
-                                <h3 class="font-bold text-white text-sm">${art.name}</h3>
-                                <div class="flex flex-wrap items-center space-x-3 text-xs text-gray-400 gap-y-1">
-                                    <span>Actuel : <strong class="text-white">${art.currentQty}</strong></span>
-                                    <span>Cible : <strong class="text-white">${art.targetQty}</strong></span>
-                                    <div class="flex items-center space-x-1">
-                                        <span>Péremption :</span>
-                                        <input type="date" value="${art.expiryDate || ''}" onchange="app.updateExpiry('${art.id}', this.value)" class="bg-gray-900 border ${art.expiryDate && art.expiryDate < new Date().toISOString().split('T')[0] ? 'border-red-500 text-red-300' : 'border-gray-700 text-white'} rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-croixrouge-500">
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="flex items-center space-x-2 w-full sm:w-auto justify-end">
-                                <div class="flex items-center bg-gray-900 rounded-xl border border-gray-700 p-1 mr-2">
-                                    <button onclick="app.updateQty('${art.id}', -1)" class="w-7 h-7 flex items-center justify-center bg-gray-800 hover:bg-gray-700 rounded-lg text-sm font-bold text-white transition">-</button>
-                                    <span class="px-3 text-xs font-bold text-white">${art.currentQty}</span>
-                                    <button onclick="app.updateQty('${art.id}', 1)" class="w-7 h-7 flex items-center justify-center bg-gray-800 hover:bg-gray-700 rounded-lg text-sm font-bold text-white transition">+</button>
-                                </div>
-                                ${this.isAdmin ? `<button onclick="app.openEditArticleModal('${art.id}')" class="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 rounded-lg text-xs font-medium transition">Modifier</button>` : ''}
-                                ${this.isAdmin ? `<button onclick="app.deleteArticle('${art.id}')" class="px-3 py-1.5 bg-red-900/40 hover:bg-red-900/60 text-red-300 rounded-lg text-xs font-medium transition">Supprimer</button>` : ''}
-                            </div>
-                        </div>
-                    `).join('')}
+                    ${this.getSortedAndFilteredArticlesHTML(lot)}
                 </div>
             `;
+        }
+
+        renderArticles() {
+            const container = document.getElementById('articles-container');
+            if (!container) return;
+            const cat = this.data.categories.find(c => c.id === this.selectedCatId);
+            const lot = cat ? cat.lots.find(l => l.id === this.selectedLotId) : null;
+            if (!lot) return;
+
+            container.innerHTML = this.getSortedAndFilteredArticlesHTML(lot);
+        }
+
+        getSortedAndFilteredArticlesHTML(lot) {
+            const articles = lot.articles || [];
+            const todayStr = new Date().toISOString().split('T')[0];
+            
+            const twoMonthsLater = new Date();
+            twoMonthsLater.setMonth(twoMonthsLater.getMonth() + 2);
+            const twoMonthsStr = twoMonthsLater.toISOString().split('T')[0];
+
+            const filtered = articles.filter(art => art.name.toLowerCase().includes(this.searchFilterText.toLowerCase()));
+
+            // Tri : Les périmés d'abord, puis les bientôt périmés, puis les autres par date croissante
+            filtered.sort((a, b) => {
+                const aExp = a.expiryDate || '9999-12-31';
+                const bExp = b.expiryDate || '9999-12-31';
+                return aExp.localeCompare(bExp);
+            });
+
+            if (filtered.length === 0) {
+                return `<p class="text-center text-gray-500 text-sm py-8">Aucun article trouvé dans ce lot.</p>`;
+            }
+
+            return filtered.map(art => {
+                const isExpired = art.expiryDate && art.expiryDate < todayStr;
+                const isSoon = art.expiryDate && !isExpired && art.expiryDate <= twoMonthsStr;
+
+                let cardBorder = "border-gray-700 bg-gray-800";
+                let badgeHtml = "";
+
+                if (isExpired) {
+                    cardBorder = "border-red-600/60 bg-red-950/20";
+                    badgeHtml = `<span class="text-red-400 font-bold bg-red-900/40 px-2 py-0.5 rounded text-xs">Périmé (${art.expiryDate})</span>`;
+                } else if (isSoon) {
+                    cardBorder = "border-amber-600/60 bg-amber-950/20";
+                    badgeHtml = `<span class="text-amber-400 font-bold bg-amber-900/40 px-2 py-0.5 rounded text-xs">Expire bientôt (${art.expiryDate})</span>`;
+                }
+
+                let inputStyle = "border-gray-700 text-white";
+                if (isExpired) inputStyle = "border-red-500 text-red-300";
+                else if (isSoon) inputStyle = "border-amber-500 text-amber-300";
+
+                return `
+                    <div class="p-4 rounded-xl border ${cardBorder} flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 transition">
+                        <div class="space-y-1">
+                            <div class="flex items-center space-x-2">
+                                <h3 class="font-bold text-white text-sm">${art.name}</h3>
+                                ${badgeHtml}
+                            </div>
+                            <div class="flex flex-wrap items-center space-x-3 text-xs text-gray-400 gap-y-1">
+                                <span>Actuel : <strong class="text-white">${art.currentQty}</strong></span>
+                                <span>Cible : <strong class="text-white">${art.targetQty}</strong></span>
+                                <div class="flex items-center space-x-1">
+                                    <span>Péremption :</span>
+                                    <input type="date" value="${art.expiryDate || ''}" onchange="app.updateExpiry('${art.id}', this.value)" class="bg-gray-900 border ${inputStyle} rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-croixrouge-500">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-2 w-full sm:w-auto justify-end">
+                            <div class="flex items-center bg-gray-900 rounded-xl border border-gray-700 p-1 mr-2">
+                                <button onclick="app.updateQty('${art.id}', -1)" class="w-7 h-7 flex items-center justify-center bg-gray-800 hover:bg-gray-700 rounded-lg text-sm font-bold text-white transition">-</button>
+                                <span class="px-3 text-xs font-bold text-white">${art.currentQty}</span>
+                                <button onclick="app.updateQty('${art.id}', 1)" class="w-7 h-7 flex items-center justify-center bg-gray-800 hover:bg-gray-700 rounded-lg text-sm font-bold text-white transition">+</button>
+                            </div>
+                            ${this.isAdmin ? `<button onclick="app.openEditArticleModal('${art.id}')" class="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 rounded-lg text-xs font-medium transition">Modifier</button>` : ''}
+                            ${this.isAdmin ? `<button onclick="app.deleteArticle('${art.id}')" class="px-3 py-1.5 bg-red-900/40 hover:bg-red-900/60 text-red-300 rounded-lg text-xs font-medium transition">Supprimer</button>` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
         }
 
         renderReapproView() {
@@ -463,42 +512,6 @@
         handleInternalSearch(value) {
             this.searchFilterText = value;
             this.renderArticles();
-        }
-
-        renderArticles() {
-            const container = document.getElementById('articles-container');
-            if (!container) return;
-            const cat = this.data.categories.find(c => c.id === this.selectedCatId);
-            const lot = cat ? cat.lots.find(l => l.id === this.selectedLotId) : null;
-            if (!lot) return;
-
-            const articles = lot.articles || [];
-            const filteredArticles = articles.filter(art => art.name.toLowerCase().includes(this.searchFilterText.toLowerCase()));
-
-            container.innerHTML = filteredArticles.length === 0 ? `<p class="text-center text-gray-500 text-sm py-8">Aucun article trouvé dans ce lot.</p>` : filteredArticles.map(art => `
-                <div class="bg-gray-800 p-4 rounded-xl border border-gray-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                    <div class="space-y-1">
-                        <h3 class="font-bold text-white text-sm">${art.name}</h3>
-                        <div class="flex flex-wrap items-center space-x-3 text-xs text-gray-400 gap-y-1">
-                            <span>Actuel : <strong class="text-white">${art.currentQty}</strong></span>
-                            <span>Cible : <strong class="text-white">${art.targetQty}</strong></span>
-                            <div class="flex items-center space-x-1">
-                                <span>Péremption :</span>
-                                <input type="date" value="${art.expiryDate || ''}" onchange="app.updateExpiry('${art.id}', this.value)" class="bg-gray-900 border ${art.expiryDate && art.expiryDate < new Date().toISOString().split('T')[0] ? 'border-red-500 text-red-300' : 'border-gray-700 text-white'} rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-croixrouge-500">
-                            </div>
-                        </div>
-                    </div>
-                    <div class="flex items-center space-x-2 w-full sm:w-auto justify-end">
-                        <div class="flex items-center bg-gray-900 rounded-xl border border-gray-700 p-1 mr-2">
-                            <button onclick="app.updateQty('${art.id}', -1)" class="w-7 h-7 flex items-center justify-center bg-gray-800 hover:bg-gray-700 rounded-lg text-sm font-bold text-white transition">-</button>
-                            <span class="px-3 text-xs font-bold text-white">${art.currentQty}</span>
-                            <button onclick="app.updateQty('${art.id}', 1)" class="w-7 h-7 flex items-center justify-center bg-gray-800 hover:bg-gray-700 rounded-lg text-sm font-bold text-white transition">+</button>
-                        </div>
-                        ${this.isAdmin ? `<button onclick="app.openEditArticleModal('${art.id}')" class="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 rounded-lg text-xs font-medium transition">Modifier</button>` : ''}
-                        ${this.isAdmin ? `<button onclick="app.deleteArticle('${art.id}')" class="px-3 py-1.5 bg-red-900/40 hover:bg-red-900/60 text-red-300 rounded-lg text-xs font-medium transition">Supprimer</button>` : ''}
-                    </div>
-                </div>
-            `).join('');
         }
 
         promptAdminLogin() {
