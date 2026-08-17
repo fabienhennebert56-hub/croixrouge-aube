@@ -309,7 +309,6 @@
 
             const filtered = articles.filter(art => art.name.toLowerCase().includes(this.searchFilterText.toLowerCase()));
 
-            // Tri : Les périmés d'abord, puis les bientôt périmés, puis les autres par date croissante
             filtered.sort((a, b) => {
                 const aExp = a.expiryDate || '9999-12-31';
                 const bExp = b.expiryDate || '9999-12-31';
