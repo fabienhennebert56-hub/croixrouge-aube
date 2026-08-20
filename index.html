@@ -234,7 +234,10 @@
                                             <span class="text-sm font-medium">${lot.name}</span>
                                             <span class="text-xs text-gray-400 block">${lot.articles ? lot.articles.length : 0} art.</span>
                                         </button>
-                                        <button onclick="app.openQrModal('${lot.id}', '${lot.name}')" class="ml-2 px-2.5 py-1 bg-gray-800 hover:bg-gray-600 text-xs rounded-lg text-gray-200 transition">QR</button>
+                                        <div class="flex items-center space-x-1 ml-2">
+                                            ${this.isAdmin ? `<button onclick="app.duplicateLot('${cat.id}', '${lot.id}')" class="px-2.5 py-1 bg-indigo-900/40 hover:bg-indigo-900/70 text-xs rounded-lg text-indigo-300 transition" title="Dupliquer ce lot">Copier</button>` : ''}
+                                            <button onclick="app.openQrModal('${lot.id}', '${lot.name}')" class="px-2.5 py-1 bg-gray-800 hover:bg-gray-600 text-xs rounded-lg text-gray-200 transition">QR</button>
+                                        </div>
                                     </div>
                                 `).join('') : `<p class="text-xs text-gray-500 italic py-1">Aucun lot dans cette catégorie.</p>`}
                             </div>
@@ -275,6 +278,7 @@
                         </div>
                         <div class="flex space-x-2 items-center">
                             <button onclick="app.openQrModal('${lot.id}', '${lot.name}')" class="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 rounded-xl text-xs font-medium transition">QR Code</button>
+                            ${this.isAdmin ? `<button onclick="app.duplicateLot('${cat.id}', '${lot.id}')" class="px-3 py-1.5 bg-indigo-900/40 text-indigo-300 rounded-xl text-xs font-medium hover:bg-indigo-900/60 transition">Copier</button>` : ''}
                             ${this.isAdmin ? `<button onclick="app.deleteLot('${lot.id}')" class="px-3 py-1.5 bg-red-900/40 text-red-300 rounded-xl text-xs font-medium hover:bg-red-900/60 transition">Supprimer le lot</button>` : ''}
                             ${this.isAdmin ? `<button onclick="app.openAddArticleModal()" class="px-3 py-1.5 bg-croixrouge-600 text-white rounded-xl text-xs font-medium hover:bg-croixrouge-700 transition">+ Ajouter un article</button>` : ''}
                         </div>
@@ -366,6 +370,30 @@
                     </div>
                 `;
             }).join('');
+        }
+
+        duplicateLot(catId, lotId) {
+            if (!this.isAdmin) return;
+            const cat = this.data.categories.find(c => c.id === catId);
+            if (!cat || !cat.lots) return;
+
+            const originalLot = cat.lots.find(l => l.id === lotId);
+            if (!originalLot) return;
+
+            // Création de la copie avec de nouveaux IDs uniques pour le lot et ses articles
+            const duplicatedLot = {
+                id: 'lot_' + Date.now(),
+                name: originalLot.name + ' (Copie)',
+                articles: (originalLot.articles || []).map(art => ({
+                    ...art,
+                    id: 'art_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5)
+                }))
+            };
+
+            cat.lots.push(duplicatedLot);
+            this.saveData();
+            this.render();
+            this.showNotification(`Lot "${originalLot.name}" copié avec succès !`, "success");
         }
 
         renderReapproView() {
