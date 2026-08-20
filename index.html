@@ -225,7 +225,10 @@
                         <div class="bg-gray-800 p-5 rounded-2xl border border-gray-700 hover:border-croixrouge-600 transition">
                             <div class="flex justify-between items-center mb-4">
                                 <h2 class="font-bold text-lg text-white">${cat.name}</h2>
-                                ${this.isAdmin ? `<button onclick="app.deleteCategory('${cat.id}')" class="text-red-400 text-xs hover:text-red-300">Supprimer</button>` : ''}
+                                <div class="flex items-center space-x-2">
+                                    ${this.isAdmin ? `<button onclick="app.openEditCategoryModal('${cat.id}')" class="text-indigo-400 text-xs hover:text-indigo-300">Modifier</button>` : ''}
+                                    ${this.isAdmin ? `<button onclick="app.deleteCategory('${cat.id}')" class="text-red-400 text-xs hover:text-red-300">Supprimer</button>` : ''}
+                                </div>
                             </div>
                             <div class="space-y-2">
                                 ${cat.lots && cat.lots.length > 0 ? cat.lots.map(lot => `
@@ -235,6 +238,7 @@
                                             <span class="text-xs text-gray-400 block">${lot.articles ? lot.articles.length : 0} art.</span>
                                         </button>
                                         <div class="flex items-center space-x-1 ml-2">
+                                            ${this.isAdmin ? `<button onclick="app.openEditLotModal('${cat.id}', '${lot.id}')" class="px-2 py-1 bg-gray-800 hover:bg-gray-700 text-xs rounded-lg text-indigo-300 transition" title="Renommer ce lot">Renommer</button>` : ''}
                                             ${this.isAdmin ? `<button onclick="app.duplicateLot('${cat.id}', '${lot.id}')" class="px-2.5 py-1 bg-indigo-900/40 hover:bg-indigo-900/70 text-xs rounded-lg text-indigo-300 transition" title="Dupliquer ce lot">Copier</button>` : ''}
                                             <button onclick="app.openQrModal('${lot.id}', '${lot.name}')" class="px-2.5 py-1 bg-gray-800 hover:bg-gray-600 text-xs rounded-lg text-gray-200 transition">QR</button>
                                         </div>
@@ -278,6 +282,7 @@
                         </div>
                         <div class="flex space-x-2 items-center">
                             <button onclick="app.openQrModal('${lot.id}', '${lot.name}')" class="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 rounded-xl text-xs font-medium transition">QR Code</button>
+                            ${this.isAdmin ? `<button onclick="app.openEditLotModal('${cat.id}', '${lot.id}')" class="px-3 py-1.5 bg-indigo-900/40 text-indigo-300 rounded-xl text-xs font-medium hover:bg-indigo-900/60 transition">Renommer</button>` : ''}
                             ${this.isAdmin ? `<button onclick="app.duplicateLot('${cat.id}', '${lot.id}')" class="px-3 py-1.5 bg-indigo-900/40 text-indigo-300 rounded-xl text-xs font-medium hover:bg-indigo-900/60 transition">Copier</button>` : ''}
                             ${this.isAdmin ? `<button onclick="app.deleteLot('${lot.id}')" class="px-3 py-1.5 bg-red-900/40 text-red-300 rounded-xl text-xs font-medium hover:bg-red-900/60 transition">Supprimer le lot</button>` : ''}
                             ${this.isAdmin ? `<button onclick="app.openAddArticleModal()" class="px-3 py-1.5 bg-croixrouge-600 text-white rounded-xl text-xs font-medium hover:bg-croixrouge-700 transition">+ Ajouter un article</button>` : ''}
@@ -380,7 +385,6 @@
             const originalLot = cat.lots.find(l => l.id === lotId);
             if (!originalLot) return;
 
-            // Création de la copie avec de nouveaux IDs uniques pour le lot et ses articles
             const duplicatedLot = {
                 id: 'lot_' + Date.now(),
                 name: originalLot.name + ' (Copie)',
@@ -394,6 +398,72 @@
             this.saveData();
             this.render();
             this.showNotification(`Lot "${originalLot.name}" copié avec succès !`, "success");
+        }
+
+        openEditCategoryModal(catId) {
+            const cat = this.data.categories.find(c => c.id === catId);
+            if (!cat) return;
+
+            this.openModal(`
+                <h3 class="text-xl font-bold mb-4 text-white">Modifier la Catégorie</h3>
+                <form onsubmit="app.saveEditCategory(event, '${catId}')">
+                    <input type="text" id="edit-cat-name" value="${cat.name}" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2.5 text-white mb-4 text-sm focus:outline-none focus:ring-2 focus:ring-croixrouge-500" required autofocus>
+                    <div class="flex justify-end space-x-2">
+                        <button type="button" onclick="app.closeModal()" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-xl text-sm font-medium">Annuler</button>
+                        <button type="submit" class="px-4 py-2 bg-croixrouge-600 hover:bg-croixrouge-700 rounded-xl text-sm font-medium">Enregistrer</button>
+                    </div>
+                </form>
+            `);
+        }
+
+        saveEditCategory(event, catId) {
+            event.preventDefault();
+            const name = document.getElementById('edit-cat-name').value.trim();
+            if (!name) return;
+
+            const cat = this.data.categories.find(c => c.id === catId);
+            if (!cat) return;
+
+            cat.name = name;
+            this.saveData();
+            this.closeModal();
+            this.render();
+            this.showNotification("Catégorie modifiée avec succès !", "success");
+        }
+
+        openEditLotModal(catId, lotId) {
+            const cat = this.data.categories.find(c => c.id === catId);
+            if (!cat || !cat.lots) return;
+            const lot = cat.lots.find(l => l.id === lotId);
+            if (!lot) return;
+
+            this.openModal(`
+                <h3 class="text-xl font-bold mb-4 text-white">Renommer le Lot</h3>
+                <form onsubmit="app.saveEditLot(event, '${catId}', '${lotId}')">
+                    <input type="text" id="edit-lot-name" value="${lot.name}" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2.5 text-white mb-4 text-sm focus:outline-none focus:ring-2 focus:ring-croixrouge-500" required autofocus>
+                    <div class="flex justify-end space-x-2">
+                        <button type="button" onclick="app.closeModal()" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-xl text-sm font-medium">Annuler</button>
+                        <button type="submit" class="px-4 py-2 bg-croixrouge-600 hover:bg-croixrouge-700 rounded-xl text-sm font-medium">Enregistrer</button>
+                    </div>
+                </form>
+            `);
+        }
+
+        saveEditLot(event, catId, lotId) {
+            event.preventDefault();
+            const name = document.getElementById('edit-lot-name').value.trim();
+            if (!name) return;
+
+            const cat = this.data.categories.find(c => c.id === catId);
+            if (!cat || !cat.lots) return;
+            const lot = cat.lots.find(l => l.id === lotId);
+            if (!lot) return;
+
+            lot.name = name;
+            this.saveData();
+            this.closeModal();
+            this.render();
+            this.showNotification("Lot renommé avec succès !", "success");
         }
 
         renderReapproView() {
@@ -979,7 +1049,7 @@
                 type === 'error' ? 'bg-red-900/50 text-red-300 border border-red-700/50' :
                 'bg-indigo-900/50 text-indigo-300 border border-indigo-700/50'
             }`;
-            banner.classList.remove('hidden');
+            banner.classList.add('hidden');
             setTimeout(() => {
                 banner.classList.add('hidden');
             }, 3500);
